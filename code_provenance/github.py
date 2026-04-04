@@ -90,6 +90,75 @@ def check_github_repo_exists(owner: str, repo: str) -> bool:
         return False
 
 
+def resolve_ghcr_digest_via_packages(owner: str, package_name: str, digest: str) -> dict | None:
+    """Use the GitHub Packages API to find the commit for a GHCR image digest.
+
+    Requires GITHUB_TOKEN with read:packages scope.
+    Returns {"repo": "owner/repo", "commit": "sha", "tags": [...]} or None.
+
+    Strategy:
+    1. Get the package metadata to find the source repo
+    2. List package versions to find matching digest and its tags
+    3. Resolve any associated tag to a commit via git tags
+    """
+    headers = github_headers()
+    if "Authorization" not in headers:
+        return None
+
+    # Try org endpoint first, then user endpoint
+    for entity_type in ["orgs", "users"]:
+        pkg_base = f"https://api.github.com/{entity_type}/{owner}/packages/container/{package_name}"
+
+        # Step 1: Get package metadata for source repo
+        try:
+            pkg_resp = requests.get(pkg_base, headers=headers, timeout=10)
+            if pkg_resp.status_code == 403:
+                return None  # No read:packages scope
+            if pkg_resp.status_code != 200:
+                continue  # Try next endpoint
+            pkg_data = pkg_resp.json()
+        except requests.RequestException:
+            continue
+
+        repo_info = pkg_data.get("repository", {})
+        full_name = repo_info.get("full_name")
+        if not full_name:
+            continue
+
+        # Step 2: Find the version matching our digest
+        url = f"{pkg_base}/versions"
+        try:
+            while url:
+                resp = requests.get(url, headers=headers, params={"per_page": 50}, timeout=10)
+                if resp.status_code != 200:
+                    break
+
+                for version in resp.json():
+                    name = version.get("name", "")
+                    if name != digest:
+                        continue
+
+                    # Found matching version
+                    metadata = version.get("metadata", {}).get("container", {})
+                    tags = metadata.get("tags", [])
+                    repo_owner, repo_name = full_name.split("/", 1)
+
+                    # Step 3: If this version has tags, resolve to commit
+                    for tag in tags:
+                        commit = resolve_tag_to_commit(repo_owner, repo_name, tag)
+                        if commit:
+                            return {"repo": full_name, "commit": commit, "tags": tags}
+
+                    # Version found but no resolvable tags
+                    return {"repo": full_name, "commit": None, "tags": tags}
+
+                url = resp.links.get("next", {}).get("url")
+        except requests.RequestException:
+            continue
+
+    return None
+
+
 def infer_repo_from_dockerhub(namespace: str, name: str) -> tuple[str, str] | None:
     """Try to find the GitHub repo for a Docker Hub image."""
     # For official images (library/X), try the image name as org/repo directly

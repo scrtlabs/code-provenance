@@ -65,12 +65,50 @@ class TestResolveImage:
         assert result.commit == sha
         assert result.resolution_method == "commit_sha_tag"
 
+    @patch("code_provenance.resolver.resolve_ghcr_digest_via_packages")
     @patch("code_provenance.resolver.fetch_oci_labels")
-    def test_digest_ref_reports_no_tag(self, mock_labels):
+    def test_digest_ref_no_packages_api(self, mock_labels, mock_packages):
+        """Digest ref with no packages API result reports no_tag."""
         mock_labels.return_value = {}
+        mock_packages.return_value = None
         digest = "sha256:1de50018f208c9a93a21d40b1a830670d113d272b53a45d322c50de9b4db1239"
         ref = ImageRef("ghcr.io", "morpheusais", "morpheus-lumerin-node-tee", digest,
                         f"ghcr.io/morpheusais/morpheus-lumerin-node-tee@{digest}")
         result = resolve_image("proxy-router", ref)
         assert result.status == "no_tag"
-        assert result.repo == "https://github.com/morpheusais/morpheus-lumerin-node-tee"
+
+    @patch("code_provenance.resolver.resolve_ghcr_digest_via_packages")
+    @patch("code_provenance.resolver.fetch_oci_labels")
+    def test_digest_ref_resolved_via_packages_api(self, mock_labels, mock_packages):
+        """Digest ref resolved via packages API."""
+        mock_labels.return_value = {}
+        mock_packages.return_value = {
+            "repo": "MorpheusAIs/Morpheus-Lumerin-Node",
+            "commit": "abc123def456",
+            "tags": ["v5.0.0"],
+        }
+        digest = "sha256:1de50018f208c9a93a21d40b1a830670d113d272b53a45d322c50de9b4db1239"
+        ref = ImageRef("ghcr.io", "morpheusais", "morpheus-lumerin-node-tee", digest,
+                        f"ghcr.io/morpheusais/morpheus-lumerin-node-tee@{digest}")
+        result = resolve_image("proxy-router", ref)
+        assert result.status == "resolved"
+        assert result.commit == "abc123def456"
+        assert result.repo == "https://github.com/MorpheusAIs/Morpheus-Lumerin-Node"
+        assert result.resolution_method == "packages_api"
+
+    @patch("code_provenance.resolver.resolve_ghcr_digest_via_packages")
+    @patch("code_provenance.resolver.fetch_oci_labels")
+    def test_digest_ref_packages_api_no_commit(self, mock_labels, mock_packages):
+        """Packages API found the version but no resolvable tags."""
+        mock_labels.return_value = {}
+        mock_packages.return_value = {
+            "repo": "MorpheusAIs/Morpheus-Lumerin-Node",
+            "commit": None,
+            "tags": [],
+        }
+        digest = "sha256:1de50018f208c9a93a21d40b1a830670d113d272b53a45d322c50de9b4db1239"
+        ref = ImageRef("ghcr.io", "morpheusais", "morpheus-lumerin-node-tee", digest,
+                        f"ghcr.io/morpheusais/morpheus-lumerin-node-tee@{digest}")
+        result = resolve_image("proxy-router", ref)
+        assert result.status == "no_tag"
+        assert result.repo == "https://github.com/MorpheusAIs/Morpheus-Lumerin-Node"

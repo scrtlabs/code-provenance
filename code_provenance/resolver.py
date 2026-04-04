@@ -1,7 +1,7 @@
 import re
 from code_provenance.models import ImageRef, ImageResult
 from code_provenance.registry import fetch_oci_labels
-from code_provenance.github import resolve_tag_to_commit, infer_repo_from_dockerhub
+from code_provenance.github import resolve_tag_to_commit, infer_repo_from_dockerhub, resolve_ghcr_digest_via_packages
 
 _COMMIT_SHA_RE = re.compile(r"^[0-9a-f]{40,}$")
 _DIGEST_RE = re.compile(r"^sha256:[0-9a-f]{64}$")
@@ -59,8 +59,29 @@ def resolve_image(service: str, ref: ImageRef) -> ImageResult:
             result.resolution_method = "tag_match"
             return result
         result.status = "repo_found_tag_not_matched"
-    else:
-        result.status = "no_tag"
+        return result
+
+    # Step 4: For GHCR digest-only images, try the packages API
+    if ref.registry == "ghcr.io" and _DIGEST_RE.match(ref.tag):
+        pkg_result = resolve_ghcr_digest_via_packages(ref.namespace, ref.name, ref.tag)
+        if pkg_result:
+            repo_full = pkg_result["repo"]
+            result.repo = f"https://github.com/{repo_full}"
+            if pkg_result.get("commit"):
+                result.commit = pkg_result["commit"]
+                result.commit_url = f"{result.repo}/commit/{result.commit}"
+                result.status = "resolved"
+                result.resolution_method = "packages_api"
+                return result
+            # Found the package but couldn't resolve tags to a commit
+            tags = pkg_result.get("tags", [])
+            if tags:
+                result.status = "repo_found_tag_not_matched"
+            else:
+                result.status = "no_tag"
+            return result
+
+    result.status = "no_tag"
     return result
 
 
