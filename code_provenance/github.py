@@ -12,10 +12,42 @@ def github_headers() -> dict[str, str]:
     return headers
 
 
+def _normalize_tag(tag: str) -> str:
+    """Strip leading 'v' for comparison."""
+    return tag.lstrip("v")
+
+
+def _is_prefix_match(image_tag: str, git_tag: str) -> bool:
+    """Check if git_tag is a more specific version of image_tag.
+
+    e.g., image_tag='v2.10' matches git_tag='v2.10.7' but not 'v2.1' or 'v2.100'.
+    """
+    norm_image = _normalize_tag(image_tag)
+    norm_git = _normalize_tag(git_tag)
+    return norm_git.startswith(norm_image + ".")
+
+
+def _parse_version_tuple(tag: str) -> tuple[int, ...] | None:
+    """Parse a version string into a tuple of ints for comparison."""
+    norm = _normalize_tag(tag)
+    # Strip pre-release suffixes like -rc1, -beta2
+    norm = re.split(r"[-+]", norm)[0]
+    parts = norm.split(".")
+    try:
+        return tuple(int(p) for p in parts)
+    except ValueError:
+        return None
+
+
 def resolve_tag_to_commit(owner: str, repo: str, tag: str) -> str | None:
-    """Resolve an image tag to a commit SHA by matching against git tags."""
+    """Resolve an image tag to a commit SHA by matching against git tags.
+
+    Tries exact match first, then prefix match (e.g., v2.10 -> highest v2.10.x).
+    """
     headers = github_headers()
     url = f"https://api.github.com/repos/{owner}/{repo}/tags"
+
+    prefix_candidates: list[tuple[tuple[int, ...], str]] = []
 
     while url:
         resp = requests.get(url, headers=headers, params={"per_page": 100}, timeout=10)
@@ -24,11 +56,22 @@ def resolve_tag_to_commit(owner: str, repo: str, tag: str) -> str | None:
 
         for git_tag in resp.json():
             name = git_tag["name"]
-            if name == tag or name == f"v{tag}" or name.lstrip("v") == tag.lstrip("v"):
+            # Exact match (with/without v prefix)
+            if name == tag or name == f"v{tag}" or _normalize_tag(name) == _normalize_tag(tag):
                 return git_tag["commit"]["sha"]
 
-        # Follow pagination
+            # Collect prefix match candidates
+            if _is_prefix_match(tag, name):
+                version = _parse_version_tuple(name)
+                if version is not None:
+                    prefix_candidates.append((version, git_tag["commit"]["sha"]))
+
         url = resp.links.get("next", {}).get("url")
+
+    # Return the highest version among prefix matches
+    if prefix_candidates:
+        prefix_candidates.sort(reverse=True)
+        return prefix_candidates[0][1]
 
     return None
 
