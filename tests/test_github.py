@@ -1,0 +1,98 @@
+import os
+from unittest.mock import patch, MagicMock
+from code_provenance.github import resolve_tag_to_commit, infer_repo_from_dockerhub, github_headers
+
+
+class TestGithubHeaders:
+    @patch.dict(os.environ, {}, clear=True)
+    def test_no_token(self):
+        h = github_headers()
+        assert "Authorization" not in h
+        assert h["Accept"] == "application/vnd.github+json"
+
+    @patch.dict(os.environ, {"GITHUB_TOKEN": "ghp_test123"})
+    def test_with_token(self):
+        h = github_headers()
+        assert h["Authorization"] == "Bearer ghp_test123"
+
+
+class TestResolveTagToCommit:
+    @patch("code_provenance.github.requests.get")
+    def test_exact_match(self, mock_get):
+        mock_get.return_value = MagicMock(
+            status_code=200,
+            json=lambda: [
+                {"name": "v3.4.12", "commit": {"sha": "0f769068b3f1abcdef"}},
+                {"name": "v3.4.11", "commit": {"sha": "aaa111bbb222"}},
+            ],
+            links={},
+        )
+        sha = resolve_tag_to_commit("azaidelson", "excalidraw", "v3.4.12")
+        assert sha == "0f769068b3f1abcdef"
+
+    @patch("code_provenance.github.requests.get")
+    def test_match_with_v_prefix(self, mock_get):
+        mock_get.return_value = MagicMock(
+            status_code=200,
+            json=lambda: [
+                {"name": "v3.4.12", "commit": {"sha": "0f769068b3f1abcdef"}},
+            ],
+            links={},
+        )
+        sha = resolve_tag_to_commit("azaidelson", "excalidraw", "3.4.12")
+        assert sha == "0f769068b3f1abcdef"
+
+    @patch("code_provenance.github.requests.get")
+    def test_no_match(self, mock_get):
+        mock_get.return_value = MagicMock(
+            status_code=200,
+            json=lambda: [
+                {"name": "v1.0.0", "commit": {"sha": "aaa111"}},
+            ],
+            links={},
+        )
+        sha = resolve_tag_to_commit("owner", "repo", "v9.9.9")
+        assert sha is None
+
+    @patch("code_provenance.github.requests.get")
+    def test_paginated_tags(self, mock_get):
+        page1 = MagicMock(
+            status_code=200,
+            json=lambda: [{"name": f"v0.{i}", "commit": {"sha": f"sha{i}"}} for i in range(100)],
+            links={"next": {"url": "https://api.github.com/repos/o/r/tags?page=2"}},
+        )
+        page2 = MagicMock(
+            status_code=200,
+            json=lambda: [{"name": "v1.0.0", "commit": {"sha": "target_sha"}}],
+            links={},
+        )
+        mock_get.side_effect = [page1, page2]
+        sha = resolve_tag_to_commit("o", "r", "v1.0.0")
+        assert sha == "target_sha"
+
+
+class TestInferRepoFromDockerhub:
+    @patch("code_provenance.github.requests.get")
+    def test_finds_github_url(self, mock_get):
+        mock_get.return_value = MagicMock(
+            status_code=200,
+            json=lambda: {
+                "full_description": "Source: https://github.com/docker-library/postgres",
+                "description": "The PostgreSQL object-relational database system",
+            },
+        )
+        owner, repo = infer_repo_from_dockerhub("library", "postgres")
+        assert owner == "docker-library"
+        assert repo == "postgres"
+
+    @patch("code_provenance.github.requests.get")
+    def test_no_github_url(self, mock_get):
+        mock_get.return_value = MagicMock(
+            status_code=200,
+            json=lambda: {
+                "full_description": "Some image with no GitHub link",
+                "description": "",
+            },
+        )
+        result = infer_repo_from_dockerhub("someuser", "someimage")
+        assert result is None
