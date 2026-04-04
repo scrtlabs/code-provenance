@@ -4,6 +4,12 @@ from code_provenance.registry import fetch_oci_labels
 from code_provenance.github import resolve_tag_to_commit, infer_repo_from_dockerhub
 
 _COMMIT_SHA_RE = re.compile(r"^[0-9a-f]{40,}$")
+_DIGEST_RE = re.compile(r"^sha256:[0-9a-f]{64}$")
+
+
+def _is_resolvable_tag(tag: str) -> bool:
+    """Check if a tag can be matched against git tags."""
+    return bool(tag) and tag != "latest" and not _DIGEST_RE.match(tag)
 
 
 def resolve_image(service: str, ref: ImageRef) -> ImageResult:
@@ -44,7 +50,7 @@ def resolve_image(service: str, ref: ImageRef) -> ImageResult:
         return result
 
     # Step 3: Tag-to-commit resolution
-    if ref.tag and ref.tag != "latest":
+    if _is_resolvable_tag(ref.tag):
         commit_sha = resolve_tag_to_commit(owner, repo_name, ref.tag)
         if commit_sha:
             result.commit = commit_sha
@@ -52,8 +58,9 @@ def resolve_image(service: str, ref: ImageRef) -> ImageResult:
             result.status = "resolved"
             result.resolution_method = "tag_match"
             return result
-
-    result.status = "repo_found_tag_not_matched" if ref.tag and ref.tag != "latest" else "no_tag"
+        result.status = "repo_found_tag_not_matched"
+    else:
+        result.status = "no_tag"
     return result
 
 

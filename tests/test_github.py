@@ -1,6 +1,6 @@
 import os
 from unittest.mock import patch, MagicMock
-from code_provenance.github import resolve_tag_to_commit, infer_repo_from_dockerhub, github_headers
+from code_provenance.github import resolve_tag_to_commit, infer_repo_from_dockerhub, github_headers, check_github_repo_exists
 
 
 class TestGithubHeaders:
@@ -71,9 +71,32 @@ class TestResolveTagToCommit:
         assert sha == "target_sha"
 
 
-class TestInferRepoFromDockerhub:
+class TestCheckGithubRepoExists:
     @patch("code_provenance.github.requests.get")
-    def test_finds_github_url(self, mock_get):
+    def test_exists(self, mock_get):
+        mock_get.return_value = MagicMock(status_code=200)
+        assert check_github_repo_exists("traefik", "traefik") is True
+
+    @patch("code_provenance.github.requests.get")
+    def test_not_exists(self, mock_get):
+        mock_get.return_value = MagicMock(status_code=404)
+        assert check_github_repo_exists("nonexistent", "repo") is False
+
+
+class TestInferRepoFromDockerhub:
+    @patch("code_provenance.github.check_github_repo_exists")
+    def test_official_image_tries_name_as_org(self, mock_exists):
+        """For library/traefik, try traefik/traefik on GitHub first."""
+        mock_exists.return_value = True
+        owner, repo = infer_repo_from_dockerhub("library", "traefik")
+        assert owner == "traefik"
+        assert repo == "traefik"
+        mock_exists.assert_called_once_with("traefik", "traefik")
+
+    @patch("code_provenance.github.requests.get")
+    @patch("code_provenance.github.check_github_repo_exists")
+    def test_falls_back_to_description(self, mock_exists, mock_get):
+        mock_exists.return_value = False
         mock_get.return_value = MagicMock(
             status_code=200,
             json=lambda: {
@@ -86,7 +109,9 @@ class TestInferRepoFromDockerhub:
         assert repo == "postgres"
 
     @patch("code_provenance.github.requests.get")
-    def test_no_github_url(self, mock_get):
+    @patch("code_provenance.github.check_github_repo_exists")
+    def test_no_github_url(self, mock_exists, mock_get):
+        mock_exists.return_value = False
         mock_get.return_value = MagicMock(
             status_code=200,
             json=lambda: {

@@ -64,3 +64,13 @@ class TestResolveImage:
         assert result.status == "resolved"
         assert result.commit == sha
         assert result.resolution_method == "commit_sha_tag"
+
+    @patch("code_provenance.resolver.fetch_oci_labels")
+    def test_digest_ref_reports_no_tag(self, mock_labels):
+        mock_labels.return_value = {}
+        digest = "sha256:1de50018f208c9a93a21d40b1a830670d113d272b53a45d322c50de9b4db1239"
+        ref = ImageRef("ghcr.io", "morpheusais", "morpheus-lumerin-node-tee", digest,
+                        f"ghcr.io/morpheusais/morpheus-lumerin-node-tee@{digest}")
+        result = resolve_image("proxy-router", ref)
+        assert result.status == "no_tag"
+        assert result.repo == "https://github.com/morpheusais/morpheus-lumerin-node-tee"
