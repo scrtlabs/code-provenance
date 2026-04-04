@@ -18,3 +18,8 @@ dev = ["pytest>=7.0"]
 
 [project.scripts]
 code-provenance = "code_provenance.cli:main"
+
+[tool.pytest.ini_options]
+markers = [
+    "integration: tests that hit real external APIs (deselect with '-m not integration')",
+]
