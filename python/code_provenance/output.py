@@ -24,7 +24,9 @@ def format_text(results: list[ImageResult]) -> str:
         ]
         if r.commit_url:
             lines.append(f"  url:        {r.commit_url}")
-        if r.matched_tag:
+        if r.matched_tag and r.resolution_method == "ghcr_cross_lookup":
             lines.append(f"  note:       commit is from matched tag '{r.matched_tag}', not the exact image digest")
+        elif r.matched_tag:
+            lines.append(f"  tag:        {r.matched_tag}")
         blocks.append("\n".join(lines))
     return "\n\n".join(blocks)

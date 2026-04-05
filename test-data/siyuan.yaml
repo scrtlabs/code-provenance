@@ -1,0 +1,71 @@
+# Release: https://github.com/scrtlabs/siyuan/releases/tag/v3.3.5
+# Workflow URL: https://github.com/scrtlabs/siyuan/actions/runs/18650429809
+# Commit: https://github.com/scrtlabs/siyuan/commit/18678a643a2d299effd56ea86d44c3ea02e19cdd
+
+version: "3.9"
+
+services:
+  main:
+    image: ghcr.io/scrtlabs/siyuan@sha256:dd399fbcba7c319b797d3186ef464409a65de24ee2d7f517649458f9546f0447
+    command:
+      - --workspace=/siyuan/workspace/
+      - --accessAuthCode=${AuthCode}
+    ports:
+      - 6806:6806
+    volumes:
+      - /siyuan/workspace:/siyuan/workspace
+    restart: unless-stopped
+    environment:
+      - TZ=IST
+    env_file:
+      - usr/.env
+    networks:
+      - traefik
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.main.rule=Host(`$DOMAIN_NAME`)
+      - traefik.http.routers.main.entrypoints=websecure
+      - traefik.http.routers.main.tls=true
+      - traefik.http.services.main.loadbalancer.server.port=6806
+
+  traefik:
+    image: traefik:v2.10
+    command:
+      - --api.insecure=false
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --entrypoints.web.address=:80
+      - --entrypoints.websecure.address=:443
+      - --entrypoints.websecure.http.tls.options=default@file
+      - --providers.file.directory=/etc/traefik/dynamic
+      - --providers.file.watch=true
+    ports:
+      - 80:80
+      - 443:443
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /mnt/secure/cert:/certs:ro
+    networks:
+      - traefik
+    configs:
+      - source: tls_config
+        target: /etc/traefik/dynamic/tls.yml
+    env_file:
+      - usr/.env
+
+networks:
+  traefik:
+    driver: bridge
+
+configs:
+  tls_config:
+    content: |-
+      tls:
+        certificates:
+          - certFile: /certs/secret_vm_fullchain.pem
+            keyFile: /certs/secret_vm_private.pem
+        stores:
+          default:
+            defaultCertificate:
+              certFile: /certs/secret_vm_fullchain.pem
+              keyFile: /certs/secret_vm_private.pem

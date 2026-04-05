@@ -193,9 +193,13 @@ export async function resolveImage(
       result.repo = `https://github.com/${repoFull}`;
       if (pkgResult.commit) {
         const commit = pkgResult.commit;
-        result.steps.push(`[4/5] Packages API: repo=${repoFull}, commit=${commit.slice(0, 12)}`);
+        const pkgTags = pkgResult.tags;
+        result.steps.push(`[4/5] Packages API: repo=${repoFull}, commit=${commit.slice(0, 12)}, tags=${JSON.stringify(pkgTags)}`);
         result.commit = commit;
         result.commit_url = `${result.repo}/commit/${result.commit}`;
+        if (pkgTags.length > 0) {
+          result.matched_tag = pkgTags.length === 1 ? pkgTags[0] : pkgTags.join(", ");
+        }
         result.status = "resolved";
         result.resolution_method = "packages_api";
         result.confidence = pkgConfidence;

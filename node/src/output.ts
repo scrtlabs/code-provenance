@@ -17,7 +17,9 @@ export function formatText(results: ImageResult[]): string {
         `  status:     ${r.status}\n` +
         `  confidence: ${confidence}` +
         (r.commit_url ? `\n  url:        ${r.commit_url}` : "") +
-        (r.matched_tag ? `\n  note:       commit is from matched tag '${r.matched_tag}', not the exact image digest` : "")
+        (r.matched_tag && r.resolution_method === "ghcr_cross_lookup"
+          ? `\n  note:       commit is from matched tag '${r.matched_tag}', not the exact image digest`
+          : r.matched_tag ? `\n  tag:        ${r.matched_tag}` : "")
       );
     })
     .join("\n\n");

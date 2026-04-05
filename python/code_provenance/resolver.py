@@ -151,9 +151,12 @@ def resolve_image(service: str, ref: ImageRef) -> ImageResult:
             result.repo = f"https://github.com/{repo_full}"
             if pkg_result.get("commit"):
                 commit = pkg_result["commit"]
-                result.steps.append(f"[4/5] Packages API: repo={repo_full}, commit={commit[:12]}")
+                pkg_tags = pkg_result.get("tags", [])
+                result.steps.append(f"[4/5] Packages API: repo={repo_full}, commit={commit[:12]}, tags={pkg_tags}")
                 result.commit = commit
                 result.commit_url = f"{result.repo}/commit/{result.commit}"
+                if pkg_tags:
+                    result.matched_tag = pkg_tags[0] if len(pkg_tags) == 1 else ", ".join(pkg_tags)
                 result.status = "resolved"
                 result.resolution_method = "packages_api"
                 result.confidence = pkg_confidence
