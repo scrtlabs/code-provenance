@@ -4,7 +4,7 @@ from code_provenance.registry import fetch_oci_labels
 from code_provenance.github import (
     resolve_tag_to_commit, infer_repo_from_dockerhub,
     resolve_ghcr_digest_via_packages, resolve_ghcr_latest_via_packages,
-    get_latest_release_commit,
+    get_latest_release_commit, get_latest_commit,
 )
 
 _COMMIT_SHA_RE = re.compile(r"^[0-9a-f]{40,}$")
@@ -96,7 +96,8 @@ def resolve_image(service: str, ref: ImageRef) -> ImageResult:
             result.status = "repo_found_tag_not_matched" if resolvable else "no_tag"
             return result
 
-    # Step 5: For :latest on any registry, try the latest GitHub release
+    # Step 5: For :latest on any registry, try the latest GitHub release,
+    # then fall back to the latest commit on the default branch
     if (ref.tag == "latest" or not ref.tag) and owner and repo_name:
         release_result = get_latest_release_commit(owner, repo_name)
         if release_result:
@@ -105,6 +106,16 @@ def resolve_image(service: str, ref: ImageRef) -> ImageResult:
             result.commit_url = f"{result.repo}/commit/{commit_sha}"
             result.status = "resolved"
             result.resolution_method = "latest_release"
+            result.confidence = "approximate"
+            return result
+
+        # No releases — fall back to latest commit on default branch
+        latest_sha = get_latest_commit(owner, repo_name)
+        if latest_sha:
+            result.commit = latest_sha
+            result.commit_url = f"{result.repo}/commit/{latest_sha}"
+            result.status = "resolved"
+            result.resolution_method = "latest_commit"
             result.confidence = "approximate"
             return result
 

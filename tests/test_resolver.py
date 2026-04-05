@@ -136,19 +136,38 @@ class TestResolveImage:
         assert result.resolution_method == "packages_api"
         assert result.confidence == "approximate"
 
+    @patch("code_provenance.resolver.get_latest_commit")
+    @patch("code_provenance.resolver.get_latest_release_commit")
     @patch("code_provenance.resolver.resolve_ghcr_latest_via_packages")
     @patch("code_provenance.resolver.fetch_oci_labels")
-    def test_latest_tag_no_packages_api(self, mock_labels, mock_latest):
-        """GHCR :latest with no packages API falls back to no_tag."""
+    def test_latest_tag_no_fallbacks(self, mock_labels, mock_latest, mock_release, mock_commit):
+        """GHCR :latest with all fallbacks exhausted reports no_tag."""
         mock_labels.return_value = {}
         mock_latest.return_value = None
+        mock_release.return_value = None
+        mock_commit.return_value = None
         ref = ImageRef("ghcr.io", "azaidelson", "excalidraw", "latest",
                         "ghcr.io/azaidelson/excalidraw:latest")
-        ref = ImageRef("ghcr.io", "azaidelson", "excalidraw", "latest",
-                        "ghcr.io/azaidelson/excalidraw:latest")
-        with patch("code_provenance.resolver.get_latest_release_commit", return_value=None):
-            result = resolve_image("web", ref)
+        result = resolve_image("web", ref)
         assert result.status == "no_tag"
+
+    @patch("code_provenance.resolver.get_latest_commit")
+    @patch("code_provenance.resolver.get_latest_release_commit")
+    @patch("code_provenance.resolver.resolve_ghcr_latest_via_packages")
+    @patch("code_provenance.resolver.fetch_oci_labels")
+    def test_latest_falls_back_to_latest_commit(self, mock_labels, mock_latest, mock_release, mock_commit):
+        """When packages API and releases fail, fall back to latest commit."""
+        mock_labels.return_value = {}
+        mock_latest.return_value = None
+        mock_release.return_value = None
+        mock_commit.return_value = "abc123def456"
+        ref = ImageRef("ghcr.io", "azaidelson", "excalidraw", "latest",
+                        "ghcr.io/azaidelson/excalidraw:latest")
+        result = resolve_image("web", ref)
+        assert result.status == "resolved"
+        assert result.commit == "abc123def456"
+        assert result.resolution_method == "latest_commit"
+        assert result.confidence == "approximate"
 
     @patch("code_provenance.resolver.get_latest_release_commit")
     @patch("code_provenance.resolver.infer_repo_from_dockerhub")

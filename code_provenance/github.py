@@ -105,6 +105,26 @@ def get_latest_release_commit(owner: str, repo: str) -> tuple[str, str] | None:
     return None
 
 
+def get_latest_commit(owner: str, repo: str) -> str | None:
+    """Get the latest commit SHA on the default branch."""
+    headers = github_headers()
+    try:
+        resp = requests.get(
+            f"https://api.github.com/repos/{owner}/{repo}/commits",
+            headers=headers,
+            params={"per_page": 1},
+            timeout=10,
+        )
+        if resp.status_code != 200:
+            return None
+        commits = resp.json()
+        if commits:
+            return commits[0]["sha"]
+    except (requests.RequestException, KeyError, IndexError):
+        pass
+    return None
+
+
 def check_github_repo_exists(owner: str, repo: str) -> bool:
     """Check if a GitHub repo exists."""
     headers = github_headers()
