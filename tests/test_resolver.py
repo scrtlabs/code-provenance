@@ -18,20 +18,32 @@ class TestResolveImage:
         assert result.resolution_method == "oci_labels"
         assert result.confidence == "exact"
 
+    @patch("code_provenance.resolver.fetch_oci_labels")
+    def test_oci_labels_latest_is_approximate(self, mock_labels):
+        mock_labels.return_value = {
+            "org.opencontainers.image.source": "https://github.com/owner/repo",
+            "org.opencontainers.image.revision": "abc123def456",
+        }
+        ref = ImageRef("ghcr.io", "owner", "repo", "latest", "ghcr.io/owner/repo:latest")
+        result = resolve_image("web", ref)
+        assert result.status == "resolved"
+        assert result.resolution_method == "oci_labels"
+        assert result.confidence == "approximate"
+
     @patch("code_provenance.resolver.resolve_tag_to_commit")
     @patch("code_provenance.resolver.fetch_oci_labels")
     def test_ghcr_tag_match_fallback(self, mock_labels, mock_tag):
         mock_labels.return_value = {}
         mock_tag.return_value = ("0f769068b3f1", True)
 
-        ref = ImageRef("ghcr.io", "azaidelson", "excalidraw", "v3.4.12", "ghcr.io/azaidelson/excalidraw:v3.4.12")
+        ref = ImageRef("ghcr.io", "acme-org", "excalidraw", "v3.4.12", "ghcr.io/acme-org/excalidraw:v3.4.12")
         result = resolve_image("web", ref)
         assert result.status == "resolved"
         assert result.commit == "0f769068b3f1"
-        assert result.repo == "https://github.com/azaidelson/excalidraw"
+        assert result.repo == "https://github.com/acme-org/excalidraw"
         assert result.resolution_method == "tag_match"
         assert result.confidence == "exact"
-        mock_tag.assert_called_once_with("azaidelson", "excalidraw", "v3.4.12")
+        mock_tag.assert_called_once_with("acme-org", "excalidraw", "v3.4.12")
 
     @patch("code_provenance.resolver.resolve_tag_to_commit")
     @patch("code_provenance.resolver.infer_repo_from_dockerhub")
@@ -124,12 +136,12 @@ class TestResolveImage:
         """GHCR :latest tag resolved via packages API co-tags."""
         mock_labels.return_value = {}
         mock_latest.return_value = {
-            "repo": "azaidelson/excalidraw",
+            "repo": "acme-org/excalidraw",
             "commit": "9891ec84f790",
             "tags": ["v3.24.0", "latest"],
         }
-        ref = ImageRef("ghcr.io", "azaidelson", "excalidraw", "latest",
-                        "ghcr.io/azaidelson/excalidraw:latest")
+        ref = ImageRef("ghcr.io", "acme-org", "excalidraw", "latest",
+                        "ghcr.io/acme-org/excalidraw:latest")
         result = resolve_image("web", ref)
         assert result.status == "resolved"
         assert result.commit == "9891ec84f790"
@@ -146,8 +158,8 @@ class TestResolveImage:
         mock_latest.return_value = None
         mock_release.return_value = None
         mock_commit.return_value = None
-        ref = ImageRef("ghcr.io", "azaidelson", "excalidraw", "latest",
-                        "ghcr.io/azaidelson/excalidraw:latest")
+        ref = ImageRef("ghcr.io", "acme-org", "excalidraw", "latest",
+                        "ghcr.io/acme-org/excalidraw:latest")
         result = resolve_image("web", ref)
         assert result.status == "no_tag"
 
@@ -161,8 +173,8 @@ class TestResolveImage:
         mock_latest.return_value = None
         mock_release.return_value = None
         mock_commit.return_value = "abc123def456"
-        ref = ImageRef("ghcr.io", "azaidelson", "excalidraw", "latest",
-                        "ghcr.io/azaidelson/excalidraw:latest")
+        ref = ImageRef("ghcr.io", "acme-org", "excalidraw", "latest",
+                        "ghcr.io/acme-org/excalidraw:latest")
         result = resolve_image("web", ref)
         assert result.status == "resolved"
         assert result.commit == "abc123def456"

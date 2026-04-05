@@ -35,7 +35,7 @@ def resolve_image(service: str, ref: ImageRef) -> ImageResult:
         result.commit_url = f"{source}/commit/{revision}"
         result.status = "resolved"
         result.resolution_method = "oci_labels"
-        result.confidence = "exact"
+        result.confidence = "approximate" if ref.tag == "latest" else "exact"
         return result
 
     # Step 2: Infer repo
