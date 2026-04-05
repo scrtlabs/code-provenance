@@ -19,11 +19,13 @@ def format_table(results: list[ImageResult]) -> str:
     table.add_column("REPO")
     table.add_column("COMMIT")
     table.add_column("STATUS")
+    table.add_column("CONFIDENCE")
 
     for r in results:
         commit_display = r.commit[:12] if r.commit else "-"
         repo_display = r.repo.replace("https://", "") if r.repo else "-"
-        table.add_row(r.service, r.image, repo_display, commit_display, r.status)
+        confidence_display = r.confidence or "-"
+        table.add_row(r.service, r.image, repo_display, commit_display, r.status, confidence_display)
 
     buf = StringIO()
     console = Console(file=buf, force_terminal=False, width=160)

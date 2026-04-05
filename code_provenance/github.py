@@ -39,10 +39,11 @@ def _parse_version_tuple(tag: str) -> tuple[int, ...] | None:
         return None
 
 
-def resolve_tag_to_commit(owner: str, repo: str, tag: str) -> str | None:
+def resolve_tag_to_commit(owner: str, repo: str, tag: str) -> tuple[str, bool] | None:
     """Resolve an image tag to a commit SHA by matching against git tags.
 
     Tries exact match first, then prefix match (e.g., v2.10 -> highest v2.10.x).
+    Returns (commit_sha, is_exact_match) or None.
     """
     headers = github_headers()
     url = f"https://api.github.com/repos/{owner}/{repo}/tags"
@@ -58,7 +59,7 @@ def resolve_tag_to_commit(owner: str, repo: str, tag: str) -> str | None:
             name = git_tag["name"]
             # Exact match (with/without v prefix)
             if name == tag or name == f"v{tag}" or _normalize_tag(name) == _normalize_tag(tag):
-                return git_tag["commit"]["sha"]
+                return git_tag["commit"]["sha"], True
 
             # Collect prefix match candidates
             if _is_prefix_match(tag, name):
@@ -71,7 +72,7 @@ def resolve_tag_to_commit(owner: str, repo: str, tag: str) -> str | None:
     # Return the highest version among prefix matches
     if prefix_candidates:
         prefix_candidates.sort(reverse=True)
-        return prefix_candidates[0][1]
+        return prefix_candidates[0][1], False
 
     return None
 
@@ -146,9 +147,10 @@ def _find_ghcr_package_version(
                     repo_owner, repo_name = full_name.split("/", 1)
                     resolvable_tags = [t for t in tags if t != "latest"]
                     for tag in resolvable_tags:
-                        commit = resolve_tag_to_commit(repo_owner, repo_name, tag)
-                        if commit:
-                            return {"repo": full_name, "commit": commit, "tags": tags}
+                        tag_result = resolve_tag_to_commit(repo_owner, repo_name, tag)
+                        if tag_result:
+                            commit_sha, _ = tag_result
+                            return {"repo": full_name, "commit": commit_sha, "tags": tags}
 
                     return {"repo": full_name, "commit": None, "tags": tags}
 

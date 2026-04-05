@@ -34,6 +34,7 @@ def resolve_image(service: str, ref: ImageRef) -> ImageResult:
         result.commit_url = f"{source}/commit/{revision}"
         result.status = "resolved"
         result.resolution_method = "oci_labels"
+        result.confidence = "exact"
         return result
 
     # Step 2: Infer repo
@@ -50,16 +51,19 @@ def resolve_image(service: str, ref: ImageRef) -> ImageResult:
         result.commit_url = f"{result.repo}/commit/{ref.tag}"
         result.status = "resolved"
         result.resolution_method = "commit_sha_tag"
+        result.confidence = "exact"
         return result
 
     # Step 3: Tag-to-commit resolution
     if _is_resolvable_tag(ref.tag):
-        commit_sha = resolve_tag_to_commit(owner, repo_name, ref.tag)
-        if commit_sha:
+        tag_result = resolve_tag_to_commit(owner, repo_name, ref.tag)
+        if tag_result:
+            commit_sha, is_exact = tag_result
             result.commit = commit_sha
             result.commit_url = f"{result.repo}/commit/{commit_sha}"
             result.status = "resolved"
             result.resolution_method = "tag_match"
+            result.confidence = "exact" if is_exact else "approximate"
             return result
         result.status = "repo_found_tag_not_matched"
         return result
@@ -68,10 +72,13 @@ def resolve_image(service: str, ref: ImageRef) -> ImageResult:
     if ref.registry == "ghcr.io":
         if _DIGEST_RE.match(ref.tag):
             pkg_result = resolve_ghcr_digest_via_packages(ref.namespace, ref.name, ref.tag)
+            pkg_confidence = "exact"  # digest is immutable
         elif ref.tag == "latest" or not ref.tag:
             pkg_result = resolve_ghcr_latest_via_packages(ref.namespace, ref.name)
+            pkg_confidence = "approximate"  # :latest is mutable
         else:
             pkg_result = None
+            pkg_confidence = None
 
         if pkg_result:
             repo_full = pkg_result["repo"]
@@ -81,6 +88,7 @@ def resolve_image(service: str, ref: ImageRef) -> ImageResult:
                 result.commit_url = f"{result.repo}/commit/{result.commit}"
                 result.status = "resolved"
                 result.resolution_method = "packages_api"
+                result.confidence = pkg_confidence
                 return result
             tags = pkg_result.get("tags", [])
             resolvable = [t for t in tags if t != "latest"]

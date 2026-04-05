@@ -28,3 +28,4 @@ class ImageResult:
     commit_url: str | None = None
     status: str = "repo_not_found"
     resolution_method: str | None = None
+    confidence: str | None = None  # "exact", "approximate", or None if unresolved

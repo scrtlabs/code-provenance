@@ -16,12 +16,13 @@ class TestResolveImage:
         assert result.commit == "abc123def456"
         assert result.repo == "https://github.com/owner/repo"
         assert result.resolution_method == "oci_labels"
+        assert result.confidence == "exact"
 
     @patch("code_provenance.resolver.resolve_tag_to_commit")
     @patch("code_provenance.resolver.fetch_oci_labels")
     def test_ghcr_tag_match_fallback(self, mock_labels, mock_tag):
         mock_labels.return_value = {}
-        mock_tag.return_value = "0f769068b3f1"
+        mock_tag.return_value = ("0f769068b3f1", True)
 
         ref = ImageRef("ghcr.io", "azaidelson", "excalidraw", "v3.4.12", "ghcr.io/azaidelson/excalidraw:v3.4.12")
         result = resolve_image("web", ref)
@@ -29,6 +30,7 @@ class TestResolveImage:
         assert result.commit == "0f769068b3f1"
         assert result.repo == "https://github.com/azaidelson/excalidraw"
         assert result.resolution_method == "tag_match"
+        assert result.confidence == "exact"
         mock_tag.assert_called_once_with("azaidelson", "excalidraw", "v3.4.12")
 
     @patch("code_provenance.resolver.resolve_tag_to_commit")
@@ -37,13 +39,14 @@ class TestResolveImage:
     def test_dockerhub_inference_and_tag_match(self, mock_labels, mock_infer, mock_tag):
         mock_labels.return_value = {}
         mock_infer.return_value = ("docker-library", "postgres")
-        mock_tag.return_value = "a1b2c3d4"
+        mock_tag.return_value = ("a1b2c3d4", True)
 
         ref = ImageRef("docker.io", "library", "postgres", "16.2", "postgres:16.2")
         result = resolve_image("db", ref)
         assert result.status == "resolved"
         assert result.commit == "a1b2c3d4"
         assert result.repo == "https://github.com/docker-library/postgres"
+        assert result.confidence == "exact"
 
     @patch("code_provenance.resolver.resolve_tag_to_commit")
     @patch("code_provenance.resolver.fetch_oci_labels")
@@ -64,6 +67,7 @@ class TestResolveImage:
         assert result.status == "resolved"
         assert result.commit == sha
         assert result.resolution_method == "commit_sha_tag"
+        assert result.confidence == "exact"
 
     @patch("code_provenance.resolver.resolve_ghcr_digest_via_packages")
     @patch("code_provenance.resolver.fetch_oci_labels")
@@ -95,6 +99,7 @@ class TestResolveImage:
         assert result.commit == "abc123def456"
         assert result.repo == "https://github.com/MorpheusAIs/Morpheus-Lumerin-Node"
         assert result.resolution_method == "packages_api"
+        assert result.confidence == "exact"
 
     @patch("code_provenance.resolver.resolve_ghcr_digest_via_packages")
     @patch("code_provenance.resolver.fetch_oci_labels")
@@ -129,6 +134,7 @@ class TestResolveImage:
         assert result.status == "resolved"
         assert result.commit == "9891ec84f790"
         assert result.resolution_method == "packages_api"
+        assert result.confidence == "approximate"
 
     @patch("code_provenance.resolver.resolve_ghcr_latest_via_packages")
     @patch("code_provenance.resolver.fetch_oci_labels")
