@@ -1,6 +1,6 @@
 version: '3'
 services:
   web:
-    image: ghcr.io/azaidelson/excalidraw:v3.4.12
+    image: ghcr.io/acme-org/excalidraw:v3.4.12
     ports:
       - "80:80"

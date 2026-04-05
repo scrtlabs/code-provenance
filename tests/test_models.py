@@ -4,12 +4,12 @@ from code_provenance.models import ImageRef, ImageResult
 def test_image_ref_full_name():
     ref = ImageRef(
         registry="ghcr.io",
-        namespace="azaidelson",
+        namespace="acme-org",
         name="excalidraw",
         tag="v3.4.12",
-        raw="ghcr.io/azaidelson/excalidraw:v3.4.12",
+        raw="ghcr.io/acme-org/excalidraw:v3.4.12",
     )
-    assert ref.full_name == "ghcr.io/azaidelson/excalidraw"
+    assert ref.full_name == "ghcr.io/acme-org/excalidraw"
 
 
 def test_image_result_defaults():

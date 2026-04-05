@@ -10,11 +10,11 @@ class TestGetRegistryToken:
             status_code=200,
             json=lambda: {"token": "test-token-123"},
         )
-        token = get_registry_token("ghcr.io", "azaidelson/excalidraw")
+        token = get_registry_token("ghcr.io", "acme-org/excalidraw")
         assert token == "test-token-123"
         mock_get.assert_called_once_with(
             "https://ghcr.io/token",
-            params={"scope": "repository:azaidelson/excalidraw:pull"},
+            params={"scope": "repository:acme-org/excalidraw:pull"},
             timeout=10,
         )
 

@@ -20,7 +20,7 @@ code-provenance [docker-compose.yml] [--json]
 Parse the docker-compose YAML and extract all `image:` fields from services. Normalize each into:
 
 - **registry**: `ghcr.io`, `docker.io`, etc. (bare image names like `postgres:16` default to `docker.io`)
-- **namespace/name**: e.g., `azaidelson/excalidraw`, `library/postgres`
+- **namespace/name**: e.g., `acme-org/excalidraw`, `library/postgres`
 - **tag**: e.g., `v3.4.12`, `latest`, or a digest. If omitted, defaults to `latest`.
 
 ## Resolution Chain
@@ -59,7 +59,7 @@ Once the GitHub repo is known, resolve the image tag to a commit:
 
 ```
 SERVICE     IMAGE                                     REPO                                 COMMIT       STATUS
-web         ghcr.io/azaidelson/excalidraw:v3.4.12     github.com/azaidelson/excalidraw      0f769068b3f1 resolved
+web         ghcr.io/acme-org/excalidraw:v3.4.12     github.com/acme-org/excalidraw      0f769068b3f1 resolved
 db          postgres:16.2                              github.com/docker-library/postgres    a1b2c3d4e5f6 resolved
 cache       redis:7.2                                  github.com/redis/redis                -            tag_not_matched
 ```
@@ -70,12 +70,12 @@ cache       redis:7.2                                  github.com/redis/redis   
 [
   {
     "service": "web",
-    "image": "ghcr.io/azaidelson/excalidraw:v3.4.12",
+    "image": "ghcr.io/acme-org/excalidraw:v3.4.12",
     "registry": "ghcr.io",
-    "repo": "https://github.com/azaidelson/excalidraw",
+    "repo": "https://github.com/acme-org/excalidraw",
     "tag": "v3.4.12",
     "commit": "0f769068b3f1...",
-    "commit_url": "https://github.com/azaidelson/excalidraw/commit/0f769068b3f1...",
+    "commit_url": "https://github.com/acme-org/excalidraw/commit/0f769068b3f1...",
     "status": "resolved",
     "resolution_method": "tag_match"
   }

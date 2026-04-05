@@ -3,9 +3,9 @@ from code_provenance.compose_parser import parse_compose, parse_image_ref
 
 class TestParseImageRef:
     def test_ghcr_with_tag(self):
-        ref = parse_image_ref("ghcr.io/azaidelson/excalidraw:v3.4.12")
+        ref = parse_image_ref("ghcr.io/acme-org/excalidraw:v3.4.12")
         assert ref.registry == "ghcr.io"
-        assert ref.namespace == "azaidelson"
+        assert ref.namespace == "acme-org"
         assert ref.name == "excalidraw"
         assert ref.tag == "v3.4.12"
 
@@ -48,7 +48,7 @@ class TestParseCompose:
 version: '3'
 services:
   web:
-    image: ghcr.io/azaidelson/excalidraw:v3.4.12
+    image: ghcr.io/acme-org/excalidraw:v3.4.12
     ports:
       - "80:80"
   db:
@@ -60,7 +60,7 @@ services:
 """
         services = parse_compose(yaml_content)
         assert len(services) == 2
-        assert services[0] == ("web", "ghcr.io/azaidelson/excalidraw:v3.4.12")
+        assert services[0] == ("web", "ghcr.io/acme-org/excalidraw:v3.4.12")
         assert services[1] == ("db", "postgres:16.2")
 
     def test_empty_services(self):

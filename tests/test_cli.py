@@ -10,7 +10,7 @@ SAMPLE_COMPOSE = """\
 version: '3'
 services:
   web:
-    image: ghcr.io/azaidelson/excalidraw:v3.4.12
+    image: ghcr.io/acme-org/excalidraw:v3.4.12
     ports:
       - "80:80"
   db:
@@ -23,12 +23,12 @@ class TestCli:
     def test_json_output(self, mock_resolve, capsys):
         mock_resolve.return_value = ImageResult(
             service="web",
-            image="ghcr.io/azaidelson/excalidraw:v3.4.12",
+            image="ghcr.io/acme-org/excalidraw:v3.4.12",
             registry="ghcr.io",
-            repo="https://github.com/azaidelson/excalidraw",
+            repo="https://github.com/acme-org/excalidraw",
             tag="v3.4.12",
             commit="0f769068b3f1",
-            commit_url="https://github.com/azaidelson/excalidraw/commit/0f769068b3f1",
+            commit_url="https://github.com/acme-org/excalidraw/commit/0f769068b3f1",
             status="resolved",
             resolution_method="tag_match",
         )

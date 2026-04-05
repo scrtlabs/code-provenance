@@ -5,7 +5,7 @@ from dataclasses import dataclass
 class ImageRef:
     """A parsed Docker image reference."""
     registry: str          # e.g. "ghcr.io", "docker.io"
-    namespace: str         # e.g. "azaidelson", "library"
+    namespace: str         # e.g. "myorg", "library"
     name: str              # e.g. "excalidraw", "postgres"
     tag: str               # e.g. "v3.4.12", "latest"
     raw: str               # original string from docker-compose

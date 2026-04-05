@@ -3,3 +3,6 @@ __pycache__/
 *.pyc
 *.egg-info/
 .pytest_cache/
+# Sample compose files in project root
+/*.yaml
+/*.yml

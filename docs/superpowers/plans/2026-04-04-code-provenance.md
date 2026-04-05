@@ -83,7 +83,7 @@ from dataclasses import dataclass, field
 class ImageRef:
     """A parsed Docker image reference."""
     registry: str          # e.g. "ghcr.io", "docker.io"
-    namespace: str         # e.g. "azaidelson", "library"
+    namespace: str         # e.g. "acme-org", "library"
     name: str              # e.g. "excalidraw", "postgres"
     tag: str               # e.g. "v3.4.12", "latest"
     raw: str               # original string from docker-compose
@@ -122,12 +122,12 @@ from code_provenance.models import ImageRef, ImageResult
 def test_image_ref_full_name():
     ref = ImageRef(
         registry="ghcr.io",
-        namespace="azaidelson",
+        namespace="acme-org",
         name="excalidraw",
         tag="v3.4.12",
-        raw="ghcr.io/azaidelson/excalidraw:v3.4.12",
+        raw="ghcr.io/acme-org/excalidraw:v3.4.12",
     )
-    assert ref.full_name == "ghcr.io/azaidelson/excalidraw"
+    assert ref.full_name == "ghcr.io/acme-org/excalidraw"
 
 
 def test_image_result_defaults():
@@ -167,9 +167,9 @@ from code_provenance.compose_parser import parse_compose, parse_image_ref
 
 class TestParseImageRef:
     def test_ghcr_with_tag(self):
-        ref = parse_image_ref("ghcr.io/azaidelson/excalidraw:v3.4.12")
+        ref = parse_image_ref("ghcr.io/acme-org/excalidraw:v3.4.12")
         assert ref.registry == "ghcr.io"
-        assert ref.namespace == "azaidelson"
+        assert ref.namespace == "acme-org"
         assert ref.name == "excalidraw"
         assert ref.tag == "v3.4.12"
 
@@ -212,7 +212,7 @@ class TestParseCompose:
 version: '3'
 services:
   web:
-    image: ghcr.io/azaidelson/excalidraw:v3.4.12
+    image: ghcr.io/acme-org/excalidraw:v3.4.12
     ports:
       - "80:80"
   db:
@@ -224,7 +224,7 @@ services:
 """
         services = parse_compose(yaml_content)
         assert len(services) == 2  # worker has no image, skipped
-        assert services[0] == ("web", "ghcr.io/azaidelson/excalidraw:v3.4.12")
+        assert services[0] == ("web", "ghcr.io/acme-org/excalidraw:v3.4.12")
         assert services[1] == ("db", "postgres:16.2")
 
     def test_empty_services(self):
@@ -349,11 +349,11 @@ class TestGetRegistryToken:
             status_code=200,
             json=lambda: {"token": "test-token-123"},
         )
-        token = get_registry_token("ghcr.io", "azaidelson/excalidraw")
+        token = get_registry_token("ghcr.io", "acme-org/excalidraw")
         assert token == "test-token-123"
         mock_get.assert_called_once_with(
             "https://ghcr.io/token",
-            params={"scope": "repository:azaidelson/excalidraw:pull"},
+            params={"scope": "repository:acme-org/excalidraw:pull"},
             timeout=10,
         )
 
@@ -554,7 +554,7 @@ class TestResolveTagToCommit:
                 {"name": "v3.4.11", "commit": {"sha": "aaa111bbb222"}},
             ],
         )
-        sha = resolve_tag_to_commit("azaidelson", "excalidraw", "v3.4.12")
+        sha = resolve_tag_to_commit("acme-org", "excalidraw", "v3.4.12")
         assert sha == "0f769068b3f1abcdef"
 
     @patch("code_provenance.github.requests.get")
@@ -566,7 +566,7 @@ class TestResolveTagToCommit:
                 {"name": "v3.4.12", "commit": {"sha": "0f769068b3f1abcdef"}},
             ],
         )
-        sha = resolve_tag_to_commit("azaidelson", "excalidraw", "3.4.12")
+        sha = resolve_tag_to_commit("acme-org", "excalidraw", "3.4.12")
         assert sha == "0f769068b3f1abcdef"
 
     @patch("code_provenance.github.requests.get")
@@ -740,13 +740,13 @@ class TestResolveImage:
         mock_labels.return_value = {}  # no OCI labels
         mock_tag.return_value = "0f769068b3f1"
 
-        ref = ImageRef("ghcr.io", "azaidelson", "excalidraw", "v3.4.12", "ghcr.io/azaidelson/excalidraw:v3.4.12")
+        ref = ImageRef("ghcr.io", "acme-org", "excalidraw", "v3.4.12", "ghcr.io/acme-org/excalidraw:v3.4.12")
         result = resolve_image("web", ref)
         assert result.status == "resolved"
         assert result.commit == "0f769068b3f1"
-        assert result.repo == "https://github.com/azaidelson/excalidraw"
+        assert result.repo == "https://github.com/acme-org/excalidraw"
         assert result.resolution_method == "tag_match"
-        mock_tag.assert_called_once_with("azaidelson", "excalidraw", "v3.4.12")
+        mock_tag.assert_called_once_with("acme-org", "excalidraw", "v3.4.12")
 
     @patch("code_provenance.resolver.resolve_tag_to_commit")
     @patch("code_provenance.resolver.infer_repo_from_dockerhub")
@@ -1017,7 +1017,7 @@ SAMPLE_COMPOSE = """\
 version: '3'
 services:
   web:
-    image: ghcr.io/azaidelson/excalidraw:v3.4.12
+    image: ghcr.io/acme-org/excalidraw:v3.4.12
     ports:
       - "80:80"
   db:
@@ -1030,12 +1030,12 @@ class TestCli:
     def test_json_output(self, mock_resolve, capsys):
         mock_resolve.return_value = ImageResult(
             service="web",
-            image="ghcr.io/azaidelson/excalidraw:v3.4.12",
+            image="ghcr.io/acme-org/excalidraw:v3.4.12",
             registry="ghcr.io",
-            repo="https://github.com/azaidelson/excalidraw",
+            repo="https://github.com/acme-org/excalidraw",
             tag="v3.4.12",
             commit="0f769068b3f1",
-            commit_url="https://github.com/azaidelson/excalidraw/commit/0f769068b3f1",
+            commit_url="https://github.com/acme-org/excalidraw/commit/0f769068b3f1",
             status="resolved",
             resolution_method="tag_match",
         )
@@ -1205,10 +1205,10 @@ from code_provenance.resolver import resolve_image
 
 @pytest.mark.integration
 def test_ghcr_excalidraw_tag_resolution():
-    """Test against real ghcr.io/azaidelson/excalidraw:v3.4.12."""
-    ref = parse_image_ref("ghcr.io/azaidelson/excalidraw:v3.4.12")
+    """Test against real ghcr.io/acme-org/excalidraw:v3.4.12."""
+    ref = parse_image_ref("ghcr.io/acme-org/excalidraw:v3.4.12")
     result = resolve_image("web", ref)
-    assert result.repo == "https://github.com/azaidelson/excalidraw"
+    assert result.repo == "https://github.com/acme-org/excalidraw"
     assert result.commit is not None
     assert len(result.commit) >= 12
     assert result.status == "resolved"
@@ -1218,7 +1218,7 @@ def test_ghcr_excalidraw_tag_resolution():
 def test_ghcr_commit_sha_tag():
     """Test that a commit-SHA tag is detected directly."""
     sha = "ac99122bcbd69f56a7d6523cbc883df9c4766e4c1046b661b76803087e4f475a"
-    ref = parse_image_ref(f"ghcr.io/azaidelson/excalidraw:{sha}")
+    ref = parse_image_ref(f"ghcr.io/acme-org/excalidraw:{sha}")
     result = resolve_image("svc", ref)
     assert result.status == "resolved"
     assert result.resolution_method == "commit_sha_tag"
@@ -1265,7 +1265,7 @@ Create `tests/fixtures/docker-compose.yml`:
 version: '3'
 services:
   web:
-    image: ghcr.io/azaidelson/excalidraw:v3.4.12
+    image: ghcr.io/acme-org/excalidraw:v3.4.12
     ports:
       - "80:80"
 ```
