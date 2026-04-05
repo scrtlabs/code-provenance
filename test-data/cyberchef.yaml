@@ -1,26 +1,49 @@
-version: '3'
 services:
-  cyberchef:
-    image: "mpepping/cyberchef:v10.22.0@sha256:9062493810478b7cf4555aaa573aa52ee7417ee28009e204603bcbd45becb587"
-    restart: always
+  db:
+    image: mariadb:10.11@sha256:dbe56e20372fc6d6b8e0e396866ba89c4c7f128c38c4f59aaa54d957db95790c
+    restart: unless-stopped
+    environment:
+      MYSQL_RANDOM_ROOT_PASSWORD: "true"
+      MYSQL_DATABASE: "passbolt"
+      MYSQL_USER: "passbolt"
+      MYSQL_PASSWORD: "$DB_PASSWORD"
+    volumes:
+      - database_volume:/var/lib/mysql
+    networks:
+      - traefik
+
+  passbolt:
+    image: passbolt/passbolt:latest-ce@sha256:f31075d1cfde0c99733c934c0be9b260266b4b239ef7bffe3654aabcec12f861
+    restart: unless-stopped
+    depends_on:
+      - db
+    environment:
+      APP_FULL_BASE_URL: https://bronze-toad.vm.scrtlabs.com
+      DATASOURCES_DEFAULT_HOST: "db"
+      DATASOURCES_DEFAULT_USERNAME: "passbolt"
+      DATASOURCES_DEFAULT_PASSWORD: "$DB_PASSWORD"
+      DATASOURCES_DEFAULT_DATABASE: "passbolt"
+    volumes:
+      - gpg_volume:/etc/passbolt/gpg
+      - jwt_volume:/etc/passbolt/jwt
+    command:
+      [
+        "/usr/bin/wait-for.sh",
+        "-t",
+        "0",
+        "db:3306",
+        "--",
+        "/docker-entrypoint.sh"
+      ]
     networks:
       - traefik
     labels:
       - traefik.enable=true
-      - traefik.http.routers.cyberchef.rule=Host(`$DOMAIN_NAME`)
-      - traefik.http.routers.cyberchef.entrypoints=websecure
-      - traefik.http.routers.cyberchef.tls=true
-      - traefik.http.services.cyberchef.loadbalancer.server.port=8000
-    # Optional: If you need persistent storage for logs, config, etc.
-    # volumes:
-    #   - "cyberchef-nginx:/etc/nginx"
-    #   - "cyberchef-ssl:/etc/ssl"
-    #   - "cyberchef-logs:/var/log/nginx"
-    # Optional: Define volumes if used above
-    # volumes:
-    #   cyberchef-nginx:
-    #   cyberchef-ssl:
-    #   cyberchef-logs:
+      - traefik.http.routers.passbolt.rule=Host(`$DOMAIN_NAME`)
+      - traefik.http.routers.passbolt.entrypoints=websecure
+      - traefik.http.routers.passbolt.tls=true
+      - traefik.http.services.passbolt.loadbalancer.server.port=80
+
   traefik:
     image: traefik:v2.10
     command:
@@ -43,9 +66,16 @@ services:
     configs:
       - source: tls_config
         target: /etc/traefik/dynamic/tls.yml
+
+volumes:
+  database_volume:
+  gpg_volume:
+  jwt_volume:
+
 networks:
   traefik:
     driver: bridge
+
 configs:
   tls_config:
     content: |-

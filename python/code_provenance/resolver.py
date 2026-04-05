@@ -5,7 +5,7 @@ from code_provenance.registry import fetch_oci_labels
 from code_provenance.github import (
     resolve_tag_to_commit, infer_repo_from_dockerhub,
     resolve_ghcr_digest_via_packages, resolve_ghcr_latest_via_packages,
-    get_latest_release_commit, get_latest_commit,
+    get_latest_release_commit, get_latest_commit, get_branch_commit,
 )
 
 _COMMIT_SHA_RE = re.compile(r"^[0-9a-f]{40,}$")
@@ -81,6 +81,18 @@ def resolve_image(service: str, ref: ImageRef) -> ImageResult:
             result.confidence = "exact" if is_exact else "approximate"
             return result
         result.steps.append("[3/5] No matching git tag found")
+        # Try matching a branch with the same name as the tag
+        result.steps.append(f"[3/5] Trying branch '{ref.tag}' in {owner}/{repo_name}")
+        branch_sha = get_branch_commit(owner, repo_name, ref.tag)
+        if branch_sha:
+            result.steps.append(f"[3/5] Branch '{ref.tag}' found: {branch_sha[:12]}")
+            result.commit = branch_sha
+            result.commit_url = f"{result.repo}/commit/{branch_sha}"
+            result.status = "resolved"
+            result.resolution_method = "branch_match"
+            result.confidence = "approximate"
+            return result
+        result.steps.append(f"[3/5] No branch '{ref.tag}' found")
         result.status = "repo_found_tag_not_matched"
         return result
 

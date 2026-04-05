@@ -119,6 +119,29 @@ export async function resolveTagToCommit(
 }
 
 /**
+ * Get the latest commit on a specific branch.
+ * Returns commit SHA or null if branch doesn't exist.
+ */
+export async function getBranchCommit(
+  owner: string,
+  repo: string,
+  branch: string
+): Promise<string | null> {
+  const headers = githubHeaders();
+  try {
+    const resp = await fetch(
+      `https://api.github.com/repos/${owner}/${repo}/branches/${encodeURIComponent(branch)}`,
+      { headers, signal: AbortSignal.timeout(10000) }
+    );
+    if (!resp.ok) return null;
+    const data = (await resp.json()) as { commit?: { sha?: string } };
+    return data.commit?.sha ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Get the commit SHA of the latest GitHub release.
  * Returns [commit_sha, tag_name] or null.
  */

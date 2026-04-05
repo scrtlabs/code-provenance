@@ -77,6 +77,22 @@ def resolve_tag_to_commit(owner: str, repo: str, tag: str) -> tuple[str, bool] |
     return None
 
 
+def get_branch_commit(owner: str, repo: str, branch: str) -> str | None:
+    """Get the latest commit on a specific branch. Returns SHA or None."""
+    headers = github_headers()
+    try:
+        resp = requests.get(
+            f"https://api.github.com/repos/{owner}/{repo}/branches/{branch}",
+            headers=headers,
+            timeout=10,
+        )
+        if resp.status_code != 200:
+            return None
+        return resp.json().get("commit", {}).get("sha")
+    except (requests.RequestException, KeyError):
+        return None
+
+
 def get_latest_release_commit(owner: str, repo: str) -> tuple[str, str] | None:
     """Get the commit SHA of the latest GitHub release.
 

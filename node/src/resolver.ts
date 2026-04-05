@@ -7,6 +7,7 @@ import {
   resolveGhcrLatestViaPackages,
   getLatestReleaseCommit,
   getLatestCommit,
+  getBranchCommit,
 } from "./github.js";
 
 const COMMIT_SHA_RE = /^[0-9a-f]{40,}$/;
@@ -112,6 +113,19 @@ export async function resolveImage(
       return result;
     }
     result.steps.push("[3/5] No matching git tag found");
+    // Try matching a branch with the same name as the tag
+    result.steps.push(`[3/5] Trying branch '${ref.tag}' in ${owner}/${repoName}`);
+    const branchSha = await getBranchCommit(owner, repoName, ref.tag);
+    if (branchSha) {
+      result.steps.push(`[3/5] Branch '${ref.tag}' found: ${branchSha.slice(0, 12)}`);
+      result.commit = branchSha;
+      result.commit_url = `${result.repo}/commit/${branchSha}`;
+      result.status = "resolved";
+      result.resolution_method = "branch_match";
+      result.confidence = "approximate";
+      return result;
+    }
+    result.steps.push(`[3/5] No branch '${ref.tag}' found`);
     result.status = "repo_found_tag_not_matched";
     return result;
   }
