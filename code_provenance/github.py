@@ -77,6 +77,34 @@ def resolve_tag_to_commit(owner: str, repo: str, tag: str) -> tuple[str, bool] |
     return None
 
 
+def get_latest_release_commit(owner: str, repo: str) -> tuple[str, str] | None:
+    """Get the commit SHA of the latest GitHub release.
+
+    Returns (commit_sha, tag_name) or None.
+    """
+    headers = github_headers()
+    try:
+        resp = requests.get(
+            f"https://api.github.com/repos/{owner}/{repo}/releases/latest",
+            headers=headers,
+            timeout=10,
+        )
+        if resp.status_code != 200:
+            return None
+        tag_name = resp.json().get("tag_name")
+        if not tag_name:
+            return None
+    except requests.RequestException:
+        return None
+
+    # Resolve the release tag to a commit
+    tag_result = resolve_tag_to_commit(owner, repo, tag_name)
+    if tag_result:
+        commit_sha, _ = tag_result
+        return commit_sha, tag_name
+    return None
+
+
 def check_github_repo_exists(owner: str, repo: str) -> bool:
     """Check if a GitHub repo exists."""
     headers = github_headers()

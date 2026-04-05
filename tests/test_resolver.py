@@ -144,5 +144,23 @@ class TestResolveImage:
         mock_latest.return_value = None
         ref = ImageRef("ghcr.io", "azaidelson", "excalidraw", "latest",
                         "ghcr.io/azaidelson/excalidraw:latest")
-        result = resolve_image("web", ref)
+        ref = ImageRef("ghcr.io", "azaidelson", "excalidraw", "latest",
+                        "ghcr.io/azaidelson/excalidraw:latest")
+        with patch("code_provenance.resolver.get_latest_release_commit", return_value=None):
+            result = resolve_image("web", ref)
         assert result.status == "no_tag"
+
+    @patch("code_provenance.resolver.get_latest_release_commit")
+    @patch("code_provenance.resolver.infer_repo_from_dockerhub")
+    @patch("code_provenance.resolver.fetch_oci_labels")
+    def test_dockerhub_latest_resolved_via_latest_release(self, mock_labels, mock_infer, mock_release):
+        """Docker Hub :latest resolved via GitHub latest release."""
+        mock_labels.return_value = {}
+        mock_infer.return_value = ("ollama", "ollama")
+        mock_release.return_value = ("abc123def456", "v0.6.2")
+        ref = ImageRef("docker.io", "ollama", "ollama", "latest", "ollama/ollama:latest")
+        result = resolve_image("ollama", ref)
+        assert result.status == "resolved"
+        assert result.commit == "abc123def456"
+        assert result.resolution_method == "latest_release"
+        assert result.confidence == "approximate"
