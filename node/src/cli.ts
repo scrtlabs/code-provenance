@@ -38,6 +38,14 @@ async function main(): Promise<number> {
     return 1;
   }
 
+  if (!process.env.GITHUB_TOKEN) {
+    console.error(
+      "Warning: GITHUB_TOKEN is not set. Some resolution methods (digest, :latest) will not work.\n" +
+      "Set it with: export GITHUB_TOKEN=ghp_your_token_here\n" +
+      "Create a token at https://github.com/settings/tokens with read:packages scope.\n"
+    );
+  }
+
   const yamlContent = readFileSync(composeFile, "utf-8");
   const services = parseCompose(yamlContent);
 

@@ -1,3 +1,4 @@
+import os
 import re
 from code_provenance.models import ImageRef, ImageResult
 from code_provenance.registry import fetch_oci_labels
@@ -85,7 +86,14 @@ def resolve_image(service: str, ref: ImageRef) -> ImageResult:
 
     # Step 4: For GHCR images, try the packages API for digest or :latest
     if ref.registry == "ghcr.io":
-        if _DIGEST_RE.match(ref.tag):
+        if not os.environ.get("GITHUB_TOKEN"):
+            result.steps.append("[4/5] GITHUB_TOKEN not set — skipping packages API (required for digest/:latest resolution)")
+            if _DIGEST_RE.match(ref.tag) or ref.tag == "latest" or not ref.tag:
+                result.status = "error_no_token"
+                return result
+            pkg_result = None
+            pkg_confidence = None
+        elif _DIGEST_RE.match(ref.tag):
             result.steps.append(f"[4/5] Trying GHCR packages API for digest {ref.tag[:20]}...")
             pkg_result = resolve_ghcr_digest_via_packages(ref.namespace, ref.name, ref.tag)
             pkg_confidence = "exact"  # digest is immutable

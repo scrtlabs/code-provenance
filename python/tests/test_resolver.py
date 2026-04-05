@@ -1,6 +1,10 @@
+import os
 from unittest.mock import patch
 from code_provenance.models import ImageRef
 from code_provenance.resolver import resolve_image
+
+# Ensure GITHUB_TOKEN is set for tests that need the packages API path
+_WITH_TOKEN = patch.dict(os.environ, {"GITHUB_TOKEN": "fake-token-for-tests"})
 
 
 class TestResolveImage:
@@ -81,6 +85,7 @@ class TestResolveImage:
         assert result.resolution_method == "commit_sha_tag"
         assert result.confidence == "exact"
 
+    @_WITH_TOKEN
     @patch("code_provenance.resolver.resolve_ghcr_digest_via_packages")
     @patch("code_provenance.resolver.fetch_oci_labels")
     def test_digest_ref_no_packages_api(self, mock_labels, mock_packages):
@@ -93,6 +98,7 @@ class TestResolveImage:
         result = resolve_image("proxy-router", ref)
         assert result.status == "no_tag"
 
+    @_WITH_TOKEN
     @patch("code_provenance.resolver.resolve_ghcr_digest_via_packages")
     @patch("code_provenance.resolver.fetch_oci_labels")
     def test_digest_ref_resolved_via_packages_api(self, mock_labels, mock_packages):
@@ -113,6 +119,7 @@ class TestResolveImage:
         assert result.resolution_method == "packages_api"
         assert result.confidence == "exact"
 
+    @_WITH_TOKEN
     @patch("code_provenance.resolver.resolve_ghcr_digest_via_packages")
     @patch("code_provenance.resolver.fetch_oci_labels")
     def test_digest_ref_packages_api_no_commit(self, mock_labels, mock_packages):
@@ -130,6 +137,7 @@ class TestResolveImage:
         assert result.status == "no_tag"
         assert result.repo == "https://github.com/MorpheusAIs/Morpheus-Lumerin-Node"
 
+    @_WITH_TOKEN
     @patch("code_provenance.resolver.resolve_ghcr_latest_via_packages")
     @patch("code_provenance.resolver.fetch_oci_labels")
     def test_latest_tag_resolved_via_packages_api(self, mock_labels, mock_latest):
@@ -148,6 +156,7 @@ class TestResolveImage:
         assert result.resolution_method == "packages_api"
         assert result.confidence == "approximate"
 
+    @_WITH_TOKEN
     @patch("code_provenance.resolver.get_latest_commit")
     @patch("code_provenance.resolver.get_latest_release_commit")
     @patch("code_provenance.resolver.resolve_ghcr_latest_via_packages")
@@ -163,6 +172,7 @@ class TestResolveImage:
         result = resolve_image("web", ref)
         assert result.status == "no_tag"
 
+    @_WITH_TOKEN
     @patch("code_provenance.resolver.get_latest_commit")
     @patch("code_provenance.resolver.get_latest_release_commit")
     @patch("code_provenance.resolver.resolve_ghcr_latest_via_packages")

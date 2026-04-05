@@ -1,4 +1,5 @@
 import argparse
+import os
 import sys
 from pathlib import Path
 from code_provenance.compose_parser import parse_compose, parse_image_ref
@@ -30,6 +31,14 @@ def main(argv: list[str] | None = None) -> int:
     )
 
     args = parser.parse_args(argv)
+
+    if not os.environ.get("GITHUB_TOKEN"):
+        print(
+            "Warning: GITHUB_TOKEN is not set. Some resolution methods (digest, :latest) will not work.\n"
+            "Set it with: export GITHUB_TOKEN=ghp_your_token_here\n"
+            "Create a token at https://github.com/settings/tokens with read:packages scope.\n",
+            file=sys.stderr,
+        )
 
     compose_path = Path(args.compose_file)
     if not compose_path.exists():

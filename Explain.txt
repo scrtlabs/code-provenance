@@ -1,0 +1,86 @@
+How ghcr.io/huggingface/text-generation-inference:sha-b4adbf2-intel-cpu is resolved
+===================================================================================
+
+The tool resolves this image to an exact commit using this chain:
+
+STEP 1 — OCI Labels Check (most likely path for this image)
+------------------------------------------------------------
+
+1. Get anonymous token from ghcr.io and store it in a variable:
+
+   TOKEN=$(curl -s "https://ghcr.io/token?scope=repository:huggingface/text-generation-inference:pull" | jq -r .token)
+
+   Note: this token is short-lived (expires in ~5 minutes) and anonymous — no auth needed.
+
+2. Fetch the manifest for tag "sha-b4adbf2-intel-cpu":
+
+   curl -sL \
+     -H "Authorization: Bearer $TOKEN" \
+     -H "Accept: application/vnd.oci.image.index.v1+json, application/vnd.docker.distribution.manifest.v2+json, application/vnd.oci.image.manifest.v1+json, application/vnd.docker.distribution.manifest.list.v2+json" \
+     "https://ghcr.io/v2/huggingface/text-generation-inference/manifests/sha-b4adbf2-intel-cpu"
+
+   → Returns an OCI image index (mediaType: application/vnd.oci.image.index.v1+json)
+     with multiple platform manifests. The amd64/linux manifest has digest:
+     sha256:c2757adcb470124254276014bbb91bbbcd9085d46fb391b382018b89f2f2188b
+
+3. Fetch the platform-specific manifest to get the config blob digest:
+
+   curl -sL \
+     -H "Authorization: Bearer $TOKEN" \
+     -H "Accept: application/vnd.oci.image.manifest.v1+json, application/vnd.docker.distribution.manifest.v2+json" \
+     "https://ghcr.io/v2/huggingface/text-generation-inference/manifests/sha256:c2757adcb470124254276014bbb91bbbcd9085d46fb391b382018b89f2f2188b"
+
+   → Returns a single manifest with config.digest:
+     sha256:eb0158b5923df763fb29ddbe58c1685b518256f4fa4bc8a80338a8bc842cde56
+
+4. Fetch the config blob to read labels:
+
+   curl -sL \
+     -H "Authorization: Bearer $TOKEN" \
+     "https://ghcr.io/v2/huggingface/text-generation-inference/blobs/sha256:eb0158b5923df763fb29ddbe58c1685b518256f4fa4bc8a80338a8bc842cde56"
+
+   → Returns image config JSON. Under .config.Labels:
+     - org.opencontainers.image.source = "https://github.com/huggingface/text-generation-inference"
+     - org.opencontainers.image.revision = "b4adbf2f6e2e721280bd0ea5f91d70f7d033f5ed"
+
+   You can extract just the labels with:
+
+   curl -sL \
+     -H "Authorization: Bearer $TOKEN" \
+     "https://ghcr.io/v2/huggingface/text-generation-inference/blobs/sha256:eb0158b5923df763fb29ddbe58c1685b518256f4fa4bc8a80338a8bc842cde56" \
+     | jq '.config.Labels | {source: .["org.opencontainers.image.source"], revision: .["org.opencontainers.image.revision"]}'
+
+5. Both labels exist → RESOLVED.
+   - repo = https://github.com/huggingface/text-generation-inference
+   - commit = b4adbf2f6e2e721280bd0ea5f91d70f7d033f5ed
+   - commit_url = https://github.com/huggingface/text-generation-inference/commit/b4adbf2f6e2e721280bd0ea5f91d70f7d033f5ed
+   - confidence = "exact" (the tag is not "latest", so OCI labels are definitive)
+   - resolution_method = "oci_labels"
+
+   The "b4adbf2" in the tag name is a short prefix of the full commit SHA
+   b4adbf2f6e2e721280bd0ea5f91d70f7d033f5ed, but the tool does NOT parse the
+   tag name — it gets the full SHA from the embedded label.
+
+STEP 2 — Fallback: Repo Inference (only if Step 1 fails)
+---------------------------------------------------------
+Since the image is on ghcr.io, the repo is inferred from the path:
+  ghcr.io/huggingface/text-generation-inference → github.com/huggingface/text-generation-inference
+
+STEP 3 — Fallback: Tag-to-Commit Matching (only if Steps 1-2 don't resolve)
+-----------------------------------------------------------------------------
+The tool would fetch git tags from the GitHub API:
+  GET https://api.github.com/repos/huggingface/text-generation-inference/tags?per_page=100
+
+It tries to match "sha-b4adbf2-intel-cpu" against git tags:
+  - Exact match: a git tag named "sha-b4adbf2-intel-cpu"
+  - With v prefix: "vsha-b4adbf2-intel-cpu"
+  - Normalized (strip v): compare both sides
+
+If matched → return the commit SHA from the git tag.
+
+SUMMARY
+-------
+For this specific image, Step 1 (OCI labels) almost certainly succeeds because
+HuggingFace's CI pipeline embeds source and revision labels in all their images.
+The commit is resolved with "exact" confidence in a single registry API call chain
+(token → manifest → config blob → labels). No GitHub API calls are needed.

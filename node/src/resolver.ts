@@ -121,7 +121,13 @@ export async function resolveImage(
     let pkgResult: { repo: string; commit: string | null; tags: string[] } | null = null;
     let pkgConfidence: string | null = null;
 
-    if (DIGEST_RE.test(ref.tag)) {
+    if (!process.env.GITHUB_TOKEN) {
+      result.steps.push("[4/5] GITHUB_TOKEN not set — skipping packages API (required for digest/:latest resolution)");
+      if (DIGEST_RE.test(ref.tag) || ref.tag === "latest" || !ref.tag) {
+        result.status = "error_no_token";
+        return result;
+      }
+    } else if (DIGEST_RE.test(ref.tag)) {
       result.steps.push(`[4/5] Trying GHCR packages API for digest ${ref.tag.slice(0, 20)}...`);
       pkgResult = await resolveGhcrDigestViaPackages(
         ref.namespace,
