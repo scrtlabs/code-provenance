@@ -6,11 +6,18 @@ def parse_image_ref(image_string: str) -> ImageRef:
     """Parse a Docker image string into an ImageRef."""
     raw = image_string
 
-    # Handle digest references (image@sha256:...)
+    # Handle digest references (image@sha256:... or image:tag@sha256:...)
     if "@" in image_string:
         name_part, digest = image_string.split("@", 1)
-        tag = digest
-        image_string = name_part
+        # Check if there's a tag before the digest (image:tag@sha256:...)
+        last_segment = name_part.split("/")[-1]
+        if ":" in last_segment:
+            colon_pos = name_part.rfind(":")
+            tag = name_part[colon_pos + 1:]
+            image_string = name_part[:colon_pos]
+        else:
+            tag = digest
+            image_string = name_part
     elif ":" in image_string.split("/")[-1]:
         colon_pos = image_string.rfind(":")
         tag = image_string[colon_pos + 1:]

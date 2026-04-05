@@ -9,11 +9,20 @@ export function parseImageRef(imageString: string): ImageRef {
   let tag: string;
   let namePart: string;
 
-  // Handle digest references (image@sha256:...)
+  // Handle digest references (image@sha256:... or image:tag@sha256:...)
   if (imageString.includes("@")) {
     const atIdx = imageString.indexOf("@");
     namePart = imageString.slice(0, atIdx);
-    tag = imageString.slice(atIdx + 1);
+    const digest = imageString.slice(atIdx + 1);
+    // Check if there's a tag before the digest (image:tag@sha256:...)
+    const lastSegment = namePart.split("/").pop()!;
+    if (lastSegment.includes(":")) {
+      const colonPos = namePart.lastIndexOf(":");
+      tag = namePart.slice(colonPos + 1);
+      namePart = namePart.slice(0, colonPos);
+    } else {
+      tag = digest;
+    }
   } else {
     const lastSegment = imageString.split("/").pop()!;
     if (lastSegment.includes(":")) {
