@@ -1,0 +1,4 @@
+version: "3"
+services:
+  web:
+    image: traefik:v3.6.0
