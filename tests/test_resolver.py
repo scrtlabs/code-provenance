@@ -112,3 +112,31 @@ class TestResolveImage:
         result = resolve_image("proxy-router", ref)
         assert result.status == "no_tag"
         assert result.repo == "https://github.com/MorpheusAIs/Morpheus-Lumerin-Node"
+
+    @patch("code_provenance.resolver.resolve_ghcr_latest_via_packages")
+    @patch("code_provenance.resolver.fetch_oci_labels")
+    def test_latest_tag_resolved_via_packages_api(self, mock_labels, mock_latest):
+        """GHCR :latest tag resolved via packages API co-tags."""
+        mock_labels.return_value = {}
+        mock_latest.return_value = {
+            "repo": "azaidelson/excalidraw",
+            "commit": "9891ec84f790",
+            "tags": ["v3.24.0", "latest"],
+        }
+        ref = ImageRef("ghcr.io", "azaidelson", "excalidraw", "latest",
+                        "ghcr.io/azaidelson/excalidraw:latest")
+        result = resolve_image("web", ref)
+        assert result.status == "resolved"
+        assert result.commit == "9891ec84f790"
+        assert result.resolution_method == "packages_api"
+
+    @patch("code_provenance.resolver.resolve_ghcr_latest_via_packages")
+    @patch("code_provenance.resolver.fetch_oci_labels")
+    def test_latest_tag_no_packages_api(self, mock_labels, mock_latest):
+        """GHCR :latest with no packages API falls back to no_tag."""
+        mock_labels.return_value = {}
+        mock_latest.return_value = None
+        ref = ImageRef("ghcr.io", "azaidelson", "excalidraw", "latest",
+                        "ghcr.io/azaidelson/excalidraw:latest")
+        result = resolve_image("web", ref)
+        assert result.status == "no_tag"
