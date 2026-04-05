@@ -84,6 +84,16 @@ for (const [service, image] of parseCompose(yaml)) {
 | `confidence` | `string \| null` | `"exact"` or `"approximate"` |
 | `steps` | `string[]` | resolution steps taken (useful with `--verbose`) |
 
+## Authentication
+
+Set `GITHUB_TOKEN` for full functionality (digest resolution, `:latest` on GHCR, higher rate limits):
+
+```bash
+export GITHUB_TOKEN=ghp_your_token_here
+```
+
+Create a classic token at https://github.com/settings/tokens with `read:packages` scope.
+
 ## License
 
 MIT

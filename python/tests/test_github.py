@@ -5,13 +5,13 @@ from code_provenance.github import resolve_tag_to_commit, infer_repo_from_docker
 
 class TestGithubHeaders:
     @patch.dict(os.environ, {}, clear=True)
-    def test_no_env_token_uses_default(self):
+    def test_no_token(self):
         h = github_headers()
-        assert "Authorization" in h
+        assert "Authorization" not in h
         assert h["Accept"] == "application/vnd.github+json"
 
     @patch.dict(os.environ, {"GITHUB_TOKEN": "ghp_test123"})
-    def test_env_token_overrides_default(self):
+    def test_with_token(self):
         h = github_headers()
         assert h["Authorization"] == "Bearer ghp_test123"
 

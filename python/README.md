@@ -81,6 +81,18 @@ for service, image in parse_compose(yaml_content):
 | `confidence` | `str \| None` | `"exact"` or `"approximate"` |
 | `steps` | `list[str]` | resolution steps taken (useful with `--verbose`) |
 
+## Authentication
+
+Set `GITHUB_TOKEN` for full functionality (digest resolution, `:latest` on GHCR, higher rate limits):
+
+```bash
+export GITHUB_TOKEN=ghp_your_token_here
+```
+
+Create a classic token at https://github.com/settings/tokens with `read:packages` scope. If using the `gh` CLI, run `gh auth refresh -h github.com -s read:packages` first.
+
+The `run.sh` wrapper auto-detects the token from `gh` CLI if available.
+
 ## License
 
 MIT

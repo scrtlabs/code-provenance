@@ -1,18 +1,12 @@
-import base64
 import os
 import re
 import requests
-
-# Read-only token for GitHub Packages API (read:packages scope only)
-_DEFAULT_TOKEN = base64.b64decode(
-    "Z2hwX1lyQWpuM2FQZGtHbFJWQW11eHFqaWtlOXZaem4yRzFKaklHSg=="
-).decode()
 
 
 def github_headers() -> dict[str, str]:
     """Build GitHub API headers, with optional token auth."""
     headers = {"Accept": "application/vnd.github+json"}
-    token = os.environ.get("GITHUB_TOKEN") or _DEFAULT_TOKEN
+    token = os.environ.get("GITHUB_TOKEN")
     if token:
         headers["Authorization"] = f"Bearer {token}"
     return headers

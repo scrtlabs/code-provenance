@@ -55,7 +55,27 @@ The tool resolves each Docker image through a chain of strategies, stopping at t
 
 ## Authentication
 
-Works out of the box for public images and repositories. Set the `GITHUB_TOKEN` environment variable for higher GitHub API rate limits and access to private repositories.
+The tool works without authentication for basic resolution (OCI labels, tag matching). However, a `GITHUB_TOKEN` is **required** for:
+
+- Resolving digest-only images (e.g., `image@sha256:...`) via the GitHub Packages API
+- Resolving `:latest` tags on GHCR images via the Packages API
+- Higher GitHub API rate limits (5000/hr vs 60/hr unauthenticated)
+
+### Setup
+
+**Option 1 — Use the `gh` CLI (recommended):** If you have the [GitHub CLI](https://cli.github.com/) installed and authenticated, `run.sh` auto-detects the token. Make sure your token has `read:packages` scope:
+
+```bash
+gh auth refresh -h github.com -s read:packages
+```
+
+**Option 2 — Set the environment variable directly:**
+
+```bash
+export GITHUB_TOKEN=ghp_your_token_here
+```
+
+Create a classic token at https://github.com/settings/tokens with `read:packages` scope.
 
 ## Language Implementations
 

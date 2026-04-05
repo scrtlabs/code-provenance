@@ -531,11 +531,6 @@ git add node/src/registry.ts && git commit -m "feat(node): OCI registry client"
 - [ ] **Step 1: Create `node/src/github.ts`**
 
 ```typescript
-const DEFAULT_TOKEN = Buffer.from(
-  "Z2hwX1lyQWpuM2FQZGtHbFJWQW11eHFqaWtlOXZaem4yRzFKaklHSg==",
-  "base64"
-).toString();
-
 function githubHeaders(): Record<string, string> {
   const headers: Record<string, string> = {
     Accept: "application/vnd.github+json",

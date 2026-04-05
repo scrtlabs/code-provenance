@@ -1,16 +1,8 @@
-import { Buffer } from "node:buffer";
-
-// Read-only token for GitHub Packages API (read:packages scope only)
-const DEFAULT_TOKEN = Buffer.from(
-  "Z2hwX1lyQWpuM2FQZGtHbFJWQW11eHFqaWtlOXZaem4yRzFKaklHSg==",
-  "base64"
-).toString();
-
 function githubHeaders(): Record<string, string> {
   const headers: Record<string, string> = {
     Accept: "application/vnd.github+json",
   };
-  const token = process.env.GITHUB_TOKEN || DEFAULT_TOKEN;
+  const token = process.env.GITHUB_TOKEN;
   if (token) {
     headers.Authorization = `Bearer ${token}`;
   }
