@@ -6,6 +6,7 @@ from code_provenance.github import (
     resolve_tag_to_commit, infer_repo_from_dockerhub,
     resolve_ghcr_digest_via_packages, resolve_ghcr_latest_via_packages,
     get_latest_release_commit, get_latest_commit, get_branch_commit,
+    find_ghcr_version_by_tag_prefix,
 )
 
 _COMMIT_SHA_RE = re.compile(r"^[0-9a-f]{40,}$")
@@ -93,6 +94,33 @@ def resolve_image(service: str, ref: ImageRef) -> ImageResult:
             result.confidence = "approximate"
             return result
         result.steps.append(f"[3/5] No branch '{ref.tag}' found")
+        # Try GHCR cross-lookup: search for a matching package version tag
+        if ref.registry == "docker.io" and os.environ.get("GITHUB_TOKEN"):
+            ghcr_owner = ref.name if ref.namespace == "library" else ref.namespace
+            result.steps.append(f"[3/5] Trying GHCR package '{ghcr_owner}/{ref.name}' for tag prefix '{ref.tag}'")
+            ghcr_match = find_ghcr_version_by_tag_prefix(ghcr_owner, ref.name, ref.tag)
+            if ghcr_match:
+                matched_tag = ghcr_match["version_tag"]
+                result.repo = f"https://github.com/{ghcr_match['repo']}"
+                result.steps.append(f"[3/5] GHCR prefix match: '{matched_tag}' in {ghcr_match['repo']}")
+                # Try OCI labels on the matched GHCR image for a commit
+                ghcr_ref = ImageRef(
+                    registry="ghcr.io", namespace=ghcr_owner, name=ref.name,
+                    tag=matched_tag, raw=f"ghcr.io/{ghcr_owner}/{ref.name}:{matched_tag}",
+                )
+                ghcr_labels = fetch_oci_labels(ghcr_ref)
+                revision = ghcr_labels.get("org.opencontainers.image.revision")
+                if revision:
+                    result.steps.append(f"[3/5] OCI labels on GHCR image: revision={revision[:12]}")
+                    result.commit = revision
+                    result.commit_url = f"{result.repo}/commit/{revision}"
+                else:
+                    result.steps.append(f"[3/5] No commit in OCI labels, matched version: {matched_tag}")
+                result.status = "resolved"
+                result.resolution_method = "ghcr_cross_lookup"
+                result.confidence = "approximate"
+                return result
+            result.steps.append("[3/5] No GHCR package match found")
         result.status = "repo_found_tag_not_matched"
         return result
 

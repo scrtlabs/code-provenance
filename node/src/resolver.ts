@@ -8,6 +8,7 @@ import {
   getLatestReleaseCommit,
   getLatestCommit,
   getBranchCommit,
+  findGhcrVersionByTagPrefix,
 } from "./github.js";
 
 const COMMIT_SHA_RE = /^[0-9a-f]{40,}$/;
@@ -126,6 +127,36 @@ export async function resolveImage(
       return result;
     }
     result.steps.push(`[3/5] No branch '${ref.tag}' found`);
+    // Try GHCR cross-lookup: search for a matching package version tag
+    if (ref.registry === "docker.io" && process.env.GITHUB_TOKEN) {
+      const ghcrOwner = ref.namespace === "library" ? ref.name : ref.namespace;
+      result.steps.push(`[3/5] Trying GHCR package '${ghcrOwner}/${ref.name}' for tag prefix '${ref.tag}'`);
+      const ghcrMatch = await findGhcrVersionByTagPrefix(ghcrOwner, ref.name, ref.tag);
+      if (ghcrMatch) {
+        const matchedTag = ghcrMatch.versionTag;
+        result.repo = `https://github.com/${ghcrMatch.repo}`;
+        result.steps.push(`[3/5] GHCR prefix match: '${matchedTag}' in ${ghcrMatch.repo}`);
+        // Try OCI labels on the matched GHCR image for a commit
+        const ghcrRef = {
+          registry: "ghcr.io", namespace: ghcrOwner, name: ref.name,
+          tag: matchedTag, raw: `ghcr.io/${ghcrOwner}/${ref.name}:${matchedTag}`,
+        };
+        const ghcrLabels = await fetchOciLabels(ghcrRef);
+        const revision = ghcrLabels["org.opencontainers.image.revision"];
+        if (revision) {
+          result.steps.push(`[3/5] OCI labels on GHCR image: revision=${revision.slice(0, 12)}`);
+          result.commit = revision;
+          result.commit_url = `${result.repo}/commit/${revision}`;
+        } else {
+          result.steps.push(`[3/5] No commit in OCI labels, matched version: ${matchedTag}`);
+        }
+        result.status = "resolved";
+        result.resolution_method = "ghcr_cross_lookup";
+        result.confidence = "approximate";
+        return result;
+      }
+      result.steps.push("[3/5] No GHCR package match found");
+    }
     result.status = "repo_found_tag_not_matched";
     return result;
   }

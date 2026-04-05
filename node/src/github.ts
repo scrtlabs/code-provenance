@@ -316,6 +316,84 @@ export async function resolveGhcrLatestViaPackages(
 }
 
 /**
+ * Search GHCR package versions for a tag matching a prefix.
+ * e.g., tagPrefix='10.11' matches '10.11.16-jammy'.
+ */
+export async function findGhcrVersionByTagPrefix(
+  owner: string,
+  packageName: string,
+  tagPrefix: string
+): Promise<{ repo: string; versionTag: string } | null> {
+  const headers = githubHeaders();
+  if (!headers.Authorization) return null;
+
+  for (const entityType of ["orgs", "users"]) {
+    const pkgBase = `https://api.github.com/${entityType}/${owner}/packages/container/${packageName}`;
+
+    let pkgResp: Response;
+    try {
+      pkgResp = await fetch(pkgBase, {
+        headers,
+        signal: AbortSignal.timeout(10000),
+      });
+      if (pkgResp.status === 403) return null;
+      if (!pkgResp.ok) continue;
+    } catch {
+      continue;
+    }
+
+    const pkgData = (await pkgResp.json()) as any;
+    const fullName: string | undefined = pkgData.repository?.full_name;
+    if (!fullName) continue;
+
+    let url: string | null = `${pkgBase}/versions?per_page=100`;
+    let bestMatch: { repo: string; versionTag: string } | null = null;
+    let bestVersion: number[] | null = null;
+
+    try {
+      while (url) {
+        const resp = await fetch(url, {
+          headers,
+          signal: AbortSignal.timeout(10000),
+        });
+        if (!resp.ok) break;
+
+        const versions = (await resp.json()) as any[];
+
+        for (const version of versions) {
+          const tags: string[] = version.metadata?.container?.tags ?? [];
+          for (const tag of tags) {
+            if (!tag.startsWith(tagPrefix)) continue;
+            const rest = tag.slice(tagPrefix.length);
+            if (rest !== "" && rest[0] !== "." && rest[0] !== "-") continue;
+
+            const verStr = tag.split("-")[0]; // strip OS suffix
+            const parts = verStr.split(".").map(Number);
+            if (parts.some(isNaN)) continue;
+
+            if (
+              bestVersion === null ||
+              compareVersions(parts, bestVersion) > 0
+            ) {
+              bestVersion = parts;
+              bestMatch = { repo: fullName, versionTag: tag };
+            }
+          }
+        }
+
+        url = parseNextLink(resp.headers.get("link"));
+      }
+    } catch {
+      // continue
+    }
+
+    if (bestMatch) return bestMatch;
+  }
+
+  return null;
+}
+
+/**
  * Try to find the GitHub repo for a Docker Hub image.
  */
 export async function inferRepoFromDockerhub(

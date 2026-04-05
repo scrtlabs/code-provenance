@@ -235,6 +235,74 @@ def resolve_ghcr_latest_via_packages(owner: str, package_name: str) -> dict | No
     return _find_ghcr_package_version(owner, package_name, match_tag="latest")
 
 
+def find_ghcr_version_by_tag_prefix(
+    owner: str, package_name: str, tag_prefix: str,
+) -> dict | None:
+    """Search GHCR package versions for a tag matching a prefix.
+
+    e.g., tag_prefix='10.11' matches '10.11.16-jammy', returns the first match.
+    Returns {"repo": "owner/repo", "version_tag": "10.11.16-jammy"} or None.
+    """
+    headers = github_headers()
+    if "Authorization" not in headers:
+        return None
+
+    for entity_type in ["orgs", "users"]:
+        pkg_base = f"https://api.github.com/{entity_type}/{owner}/packages/container/{package_name}"
+
+        try:
+            pkg_resp = requests.get(pkg_base, headers=headers, timeout=10)
+            if pkg_resp.status_code == 403:
+                return None
+            if pkg_resp.status_code != 200:
+                continue
+            pkg_data = pkg_resp.json()
+        except requests.RequestException:
+            continue
+
+        repo_info = pkg_data.get("repository", {})
+        full_name = repo_info.get("full_name")
+        if not full_name:
+            continue
+
+        # Search versions for a tag matching the prefix
+        url = f"{pkg_base}/versions"
+        best_match = None
+        best_version: tuple[int, ...] | None = None
+        try:
+            while url:
+                resp = requests.get(url, headers=headers, params={"per_page": 100}, timeout=10)
+                if resp.status_code != 200:
+                    break
+
+                for version in resp.json():
+                    metadata = version.get("metadata", {}).get("container", {})
+                    tags = metadata.get("tags", [])
+                    for tag in tags:
+                        # Check if tag starts with prefix followed by . or -
+                        stripped = tag[len(tag_prefix):] if tag.startswith(tag_prefix) else None
+                        if stripped is not None and (stripped == "" or stripped[0] in ".-"):
+                            # Parse version for comparison
+                            ver_str = tag.split("-")[0]  # strip OS suffix like -jammy
+                            parts = ver_str.split(".")
+                            try:
+                                ver_tuple = tuple(int(p) for p in parts)
+                            except ValueError:
+                                ver_tuple = None
+                            if ver_tuple and (best_version is None or ver_tuple > best_version):
+                                best_version = ver_tuple
+                                best_match = {"repo": full_name, "version_tag": tag}
+
+                url = resp.links.get("next", {}).get("url")
+        except requests.RequestException:
+            pass
+
+        if best_match:
+            return best_match
+
+    return None
+
+
 def infer_repo_from_dockerhub(namespace: str, name: str) -> tuple[str, str] | None:
     """Try to find the GitHub repo for a Docker Hub image."""
     # For official images (library/X), try the image name as org/repo directly
