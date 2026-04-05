@@ -17,4 +17,5 @@ export interface ImageResult {
   status: string;
   resolution_method: string | null;
   confidence: string | null;
+  steps: string[];
 }

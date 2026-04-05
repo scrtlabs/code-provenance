@@ -15,8 +15,9 @@ positional arguments:
   compose_file  Path to docker-compose file (default: docker-compose.yml)
 
 options:
-  -h, --help    show this help message and exit
-  --json        Output results as JSON`);
+  -h, --help       show this help message and exit
+  --json           Output results as JSON
+  -v, --verbose    Show resolution steps`);
 }
 
 async function main(): Promise<number> {
@@ -28,7 +29,8 @@ async function main(): Promise<number> {
   }
 
   const jsonOutput = args.includes("--json");
-  const positionalArgs = args.filter((a) => a !== "--json");
+  const verbose = args.includes("--verbose") || args.includes("-v");
+  const positionalArgs = args.filter((a) => a !== "--json" && a !== "--verbose" && a !== "-v");
   const composeFile = positionalArgs[0] || "docker-compose.yml";
 
   if (!existsSync(composeFile)) {
@@ -51,6 +53,22 @@ async function main(): Promise<number> {
       return resolveImage(serviceName, ref);
     })
   );
+
+  if (verbose) {
+    for (const r of results) {
+      console.error(`\nResolving ${r.image} ...`);
+      for (const step of r.steps) {
+        console.error(`  ${step}`);
+      }
+      console.error(
+        `  → ${r.status}` +
+          (r.status === "resolved"
+            ? ` (${r.resolution_method}, ${r.confidence})`
+            : "")
+      );
+    }
+    console.error();
+  }
 
   if (jsonOutput) {
     console.log(formatJson(results));
