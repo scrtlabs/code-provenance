@@ -5,13 +5,13 @@ from code_provenance.github import resolve_tag_to_commit, infer_repo_from_docker
 
 class TestGithubHeaders:
     @patch.dict(os.environ, {}, clear=True)
-    def test_no_token(self):
+    def test_no_env_token_uses_default(self):
         h = github_headers()
-        assert "Authorization" not in h
+        assert "Authorization" in h
         assert h["Accept"] == "application/vnd.github+json"
 
     @patch.dict(os.environ, {"GITHUB_TOKEN": "ghp_test123"})
-    def test_with_token(self):
+    def test_env_token_overrides_default(self):
         h = github_headers()
         assert h["Authorization"] == "Bearer ghp_test123"
 
@@ -27,7 +27,7 @@ class TestResolveTagToCommit:
             ],
             links={},
         )
-        sha, is_exact = resolve_tag_to_commit("azaidelson", "excalidraw", "v3.4.12")
+        sha, is_exact = resolve_tag_to_commit("acme-org", "excalidraw", "v3.4.12")
         assert sha == "0f769068b3f1abcdef"
         assert is_exact is True
 
@@ -40,7 +40,7 @@ class TestResolveTagToCommit:
             ],
             links={},
         )
-        sha, is_exact = resolve_tag_to_commit("azaidelson", "excalidraw", "3.4.12")
+        sha, is_exact = resolve_tag_to_commit("acme-org", "excalidraw", "3.4.12")
         assert sha == "0f769068b3f1abcdef"
         assert is_exact is True
 
