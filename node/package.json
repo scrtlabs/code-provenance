@@ -25,5 +25,13 @@
   "devDependencies": {
     "@types/node": "^20.11.0",
     "typescript": "^5.3.0"
-  }
+  },
+  "author": "SCRT Labs",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/scrtlabs/code-provenance.git",
+    "directory": "node"
+  },
+  "homepage": "https://github.com/scrtlabs/code-provenance/tree/main/node"
 }
