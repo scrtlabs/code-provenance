@@ -27,7 +27,7 @@ class TestResolveTagToCommit:
             ],
             links={},
         )
-        sha, is_exact = resolve_tag_to_commit("acme-org", "excalidraw", "v3.4.12")
+        sha, is_exact, _matched = resolve_tag_to_commit("acme-org", "excalidraw", "v3.4.12")
         assert sha == "0f769068b3f1abcdef"
         assert is_exact is True
 
@@ -40,7 +40,7 @@ class TestResolveTagToCommit:
             ],
             links={},
         )
-        sha, is_exact = resolve_tag_to_commit("acme-org", "excalidraw", "3.4.12")
+        sha, is_exact, _matched = resolve_tag_to_commit("acme-org", "excalidraw", "3.4.12")
         assert sha == "0f769068b3f1abcdef"
         assert is_exact is True
 
@@ -69,7 +69,7 @@ class TestResolveTagToCommit:
             links={},
         )
         mock_get.side_effect = [page1, page2]
-        sha, is_exact = resolve_tag_to_commit("o", "r", "v1.0.0")
+        sha, is_exact, _matched = resolve_tag_to_commit("o", "r", "v1.0.0")
         assert sha == "target_sha"
         assert is_exact is True
 
@@ -86,7 +86,7 @@ class TestResolveTagToCommit:
             ],
             links={},
         )
-        sha, is_exact = resolve_tag_to_commit("traefik", "traefik", "v2.10")
+        sha, is_exact, _matched = resolve_tag_to_commit("traefik", "traefik", "v2.10")
         assert sha == "sha_v2107"
         assert is_exact is False
 
@@ -114,7 +114,7 @@ class TestResolveTagToCommit:
             ],
             links={},
         )
-        sha, is_exact = resolve_tag_to_commit("owner", "repo", "v2.10")
+        sha, is_exact, _matched = resolve_tag_to_commit("owner", "repo", "v2.10")
         assert sha == "sha_exact"
         assert is_exact is True
 

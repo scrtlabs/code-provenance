@@ -70,12 +70,12 @@ export async function resolveTagToCommit(
   owner: string,
   repo: string,
   tag: string
-): Promise<[string, boolean] | null> {
+): Promise<[string, boolean, string] | null> {
   const headers = githubHeaders();
   let url: string | null =
     `https://api.github.com/repos/${owner}/${repo}/tags?per_page=100`;
 
-  const prefixCandidates: [number[], string][] = [];
+  const prefixCandidates: [number[], string, string][] = [];
 
   while (url) {
     const resp = await fetch(url, {
@@ -94,14 +94,14 @@ export async function resolveTagToCommit(
         name === `v${tag}` ||
         normalizeTag(name) === normalizeTag(tag)
       ) {
-        return [gitTag.commit.sha, true];
+        return [gitTag.commit.sha, true, name];
       }
 
       // Collect prefix match candidates
       if (isPrefixMatch(tag, name)) {
         const version = parseVersionTuple(name);
         if (version !== null) {
-          prefixCandidates.push([version, gitTag.commit.sha]);
+          prefixCandidates.push([version, gitTag.commit.sha, name]);
         }
       }
     }
@@ -112,7 +112,7 @@ export async function resolveTagToCommit(
   // Return the highest version among prefix matches
   if (prefixCandidates.length > 0) {
     prefixCandidates.sort((a, b) => compareVersions(b[0], a[0]));
-    return [prefixCandidates[0][1], false];
+    return [prefixCandidates[0][1], false, prefixCandidates[0][2]];
   }
 
   return null;

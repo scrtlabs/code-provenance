@@ -65,6 +65,7 @@ export async function resolveImage(
     result.repo = source;
     result.commit = revision;
     result.commit_url = `${source}/commit/${revision}`;
+    result.matched_tag = ref.tag;
     result.status = "resolved";
     result.resolution_method = "oci_labels";
     result.confidence = ref.tag === "latest" ? "approximate" : "exact";
@@ -90,6 +91,7 @@ export async function resolveImage(
     result.steps.push("[2/5] Tag is a commit SHA, using directly");
     result.commit = ref.tag;
     result.commit_url = `${result.repo}/commit/${ref.tag}`;
+    result.matched_tag = ref.tag;
     result.status = "resolved";
     result.resolution_method = "commit_sha_tag";
     result.confidence = "exact";
@@ -101,14 +103,15 @@ export async function resolveImage(
     result.steps.push(`[3/5] Matching tag "${ref.tag}" against git tags in ${owner}/${repoName}`);
     const tagResult = await resolveTagToCommit(owner, repoName, ref.tag);
     if (tagResult) {
-      const [commitSha, isExact] = tagResult;
+      const [commitSha, isExact, gitTagName] = tagResult;
       if (isExact) {
-        result.steps.push(`[3/5] Exact tag match: ${commitSha.slice(0, 12)}`);
+        result.steps.push(`[3/5] Exact tag match: ${gitTagName} -> ${commitSha.slice(0, 12)}`);
       } else {
-        result.steps.push(`[3/5] Prefix match (e.g. v2.10 -> v2.10.x): ${commitSha.slice(0, 12)}`);
+        result.steps.push(`[3/5] Prefix match: ${gitTagName} -> ${commitSha.slice(0, 12)}`);
       }
       result.commit = commitSha;
       result.commit_url = `${result.repo}/commit/${commitSha}`;
+      result.matched_tag = gitTagName;
       result.status = "resolved";
       result.resolution_method = "tag_match";
       result.confidence = isExact ? "exact" : "approximate";

@@ -37,6 +37,7 @@ def resolve_image(service: str, ref: ImageRef) -> ImageResult:
         result.repo = source
         result.commit = revision
         result.commit_url = f"{source}/commit/{revision}"
+        result.matched_tag = ref.tag
         result.status = "resolved"
         result.resolution_method = "oci_labels"
         result.confidence = "approximate" if ref.tag == "latest" else "exact"
@@ -60,6 +61,7 @@ def resolve_image(service: str, ref: ImageRef) -> ImageResult:
         result.steps.append("[2/5] Tag is a commit SHA, using directly")
         result.commit = ref.tag
         result.commit_url = f"{result.repo}/commit/{ref.tag}"
+        result.matched_tag = ref.tag
         result.status = "resolved"
         result.resolution_method = "commit_sha_tag"
         result.confidence = "exact"
@@ -70,13 +72,14 @@ def resolve_image(service: str, ref: ImageRef) -> ImageResult:
         result.steps.append(f'[3/5] Matching tag "{ref.tag}" against git tags in {owner}/{repo_name}')
         tag_result = resolve_tag_to_commit(owner, repo_name, ref.tag)
         if tag_result:
-            commit_sha, is_exact = tag_result
+            commit_sha, is_exact, git_tag_name = tag_result
             if is_exact:
-                result.steps.append(f"[3/5] Exact tag match: {commit_sha[:12]}")
+                result.steps.append(f"[3/5] Exact tag match: {git_tag_name} -> {commit_sha[:12]}")
             else:
-                result.steps.append(f"[3/5] Prefix match (e.g. v2.10 -> v2.10.x): {commit_sha[:12]}")
+                result.steps.append(f"[3/5] Prefix match: {git_tag_name} -> {commit_sha[:12]}")
             result.commit = commit_sha
             result.commit_url = f"{result.repo}/commit/{commit_sha}"
+            result.matched_tag = git_tag_name
             result.status = "resolved"
             result.resolution_method = "tag_match"
             result.confidence = "exact" if is_exact else "approximate"

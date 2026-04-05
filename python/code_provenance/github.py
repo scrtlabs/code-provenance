@@ -39,16 +39,16 @@ def _parse_version_tuple(tag: str) -> tuple[int, ...] | None:
         return None
 
 
-def resolve_tag_to_commit(owner: str, repo: str, tag: str) -> tuple[str, bool] | None:
+def resolve_tag_to_commit(owner: str, repo: str, tag: str) -> tuple[str, bool, str] | None:
     """Resolve an image tag to a commit SHA by matching against git tags.
 
     Tries exact match first, then prefix match (e.g., v2.10 -> highest v2.10.x).
-    Returns (commit_sha, is_exact_match) or None.
+    Returns (commit_sha, is_exact_match, matched_git_tag) or None.
     """
     headers = github_headers()
     url = f"https://api.github.com/repos/{owner}/{repo}/tags"
 
-    prefix_candidates: list[tuple[tuple[int, ...], str]] = []
+    prefix_candidates: list[tuple[tuple[int, ...], str, str]] = []  # (version, sha, tag_name)
 
     while url:
         resp = requests.get(url, headers=headers, params={"per_page": 100}, timeout=10)
@@ -59,20 +59,20 @@ def resolve_tag_to_commit(owner: str, repo: str, tag: str) -> tuple[str, bool] |
             name = git_tag["name"]
             # Exact match (with/without v prefix)
             if name == tag or name == f"v{tag}" or _normalize_tag(name) == _normalize_tag(tag):
-                return git_tag["commit"]["sha"], True
+                return git_tag["commit"]["sha"], True, name
 
             # Collect prefix match candidates
             if _is_prefix_match(tag, name):
                 version = _parse_version_tuple(name)
                 if version is not None:
-                    prefix_candidates.append((version, git_tag["commit"]["sha"]))
+                    prefix_candidates.append((version, git_tag["commit"]["sha"], name))
 
         url = resp.links.get("next", {}).get("url")
 
     # Return the highest version among prefix matches
     if prefix_candidates:
         prefix_candidates.sort(reverse=True)
-        return prefix_candidates[0][1], False
+        return prefix_candidates[0][1], False, prefix_candidates[0][2]
 
     return None
 
@@ -116,7 +116,7 @@ def get_latest_release_commit(owner: str, repo: str) -> tuple[str, str] | None:
     # Resolve the release tag to a commit
     tag_result = resolve_tag_to_commit(owner, repo, tag_name)
     if tag_result:
-        commit_sha, _ = tag_result
+        commit_sha, _, _ = tag_result
         return commit_sha, tag_name
     return None
 
@@ -213,7 +213,7 @@ def _find_ghcr_package_version(
                     for tag in resolvable_tags:
                         tag_result = resolve_tag_to_commit(repo_owner, repo_name, tag)
                         if tag_result:
-                            commit_sha, _ = tag_result
+                            commit_sha, _, _ = tag_result
                             return {"repo": full_name, "commit": commit_sha, "tags": tags}
 
                     return {"repo": full_name, "commit": None, "tags": tags}

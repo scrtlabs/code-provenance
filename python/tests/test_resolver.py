@@ -38,7 +38,7 @@ class TestResolveImage:
     @patch("code_provenance.resolver.fetch_oci_labels")
     def test_ghcr_tag_match_fallback(self, mock_labels, mock_tag):
         mock_labels.return_value = {}
-        mock_tag.return_value = ("0f769068b3f1", True)
+        mock_tag.return_value = ("0f769068b3f1", True, "v3.4.12")
 
         ref = ImageRef("ghcr.io", "acme-org", "excalidraw", "v3.4.12", "ghcr.io/acme-org/excalidraw:v3.4.12")
         result = resolve_image("web", ref)
@@ -55,7 +55,7 @@ class TestResolveImage:
     def test_dockerhub_inference_and_tag_match(self, mock_labels, mock_infer, mock_tag):
         mock_labels.return_value = {}
         mock_infer.return_value = ("docker-library", "postgres")
-        mock_tag.return_value = ("a1b2c3d4", True)
+        mock_tag.return_value = ("a1b2c3d4", True, "16.2")
 
         ref = ImageRef("docker.io", "library", "postgres", "16.2", "postgres:16.2")
         result = resolve_image("db", ref)
