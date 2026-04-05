@@ -29,4 +29,5 @@ class ImageResult:
     status: str = "repo_not_found"
     resolution_method: str | None = None
     confidence: str | None = None  # "exact", "approximate", or None if unresolved
+    matched_tag: str | None = None  # the actual tag matched (when different from the requested tag)
     steps: list[str] = field(default_factory=list)

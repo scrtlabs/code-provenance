@@ -16,7 +16,8 @@ export function formatText(results: ImageResult[]): string {
         `  commit:     ${commit}\n` +
         `  status:     ${r.status}\n` +
         `  confidence: ${confidence}` +
-        (r.commit_url ? `\n  url:        ${r.commit_url}` : "")
+        (r.commit_url ? `\n  url:        ${r.commit_url}` : "") +
+        (r.matched_tag ? `\n  note:       commit is from matched tag '${r.matched_tag}', not the exact image digest` : "")
       );
     })
     .join("\n\n");

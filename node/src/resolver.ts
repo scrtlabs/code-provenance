@@ -51,6 +51,7 @@ export async function resolveImage(
     status: "repo_not_found",
     resolution_method: null,
     confidence: null,
+    matched_tag: null,
     steps: [],
   };
 
@@ -150,6 +151,7 @@ export async function resolveImage(
         } else {
           result.steps.push(`[3/5] No commit in OCI labels, matched version: ${matchedTag}`);
         }
+        result.matched_tag = matchedTag;
         result.status = "resolved";
         result.resolution_method = "ghcr_cross_lookup";
         result.confidence = "approximate";

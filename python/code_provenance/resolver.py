@@ -116,6 +116,7 @@ def resolve_image(service: str, ref: ImageRef) -> ImageResult:
                     result.commit_url = f"{result.repo}/commit/{revision}"
                 else:
                     result.steps.append(f"[3/5] No commit in OCI labels, matched version: {matched_tag}")
+                result.matched_tag = matched_tag
                 result.status = "resolved"
                 result.resolution_method = "ghcr_cross_lookup"
                 result.confidence = "approximate"

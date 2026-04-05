@@ -17,5 +17,6 @@ export interface ImageResult {
   status: string;
   resolution_method: string | null;
   confidence: string | null;
+  matched_tag: string | null;
   steps: string[];
 }
