@@ -47,11 +47,18 @@ async function main(): Promise<number> {
   }
 
   const yamlContent = readFileSync(composeFile, "utf-8");
-  const services = parseCompose(yamlContent);
+
+  let services: Array<[string, string]>;
+  try {
+    services = parseCompose(yamlContent);
+  } catch (err) {
+    console.error(`Error: failed to parse ${composeFile} — ${err instanceof Error ? err.message : err}`);
+    return 1;
+  }
 
   if (services.length === 0) {
-    console.error("No services with images found.");
-    return 0;
+    console.error("No services with images found. Is this a valid docker-compose file?");
+    return 1;
   }
 
   // Resolve all images in parallel

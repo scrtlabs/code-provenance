@@ -6,16 +6,16 @@ The tool resolves this image to an exact commit using this chain:
 STEP 1 — OCI Labels Check (most likely path for this image)
 ------------------------------------------------------------
 
-1. Get anonymous token from ghcr.io and store it in a variable:
+1. Get anonymous token from ghcr.io:
 
-   TOKEN=$(curl -s "https://ghcr.io/token?scope=repository:huggingface/text-generation-inference:pull" | jq -r .token)
+   curl -s "https://ghcr.io/token?scope=repository:huggingface/text-generation-inference:pull"
 
-   Note: this token is short-lived (expires in ~5 minutes) and anonymous — no auth needed.
+   → Returns: {"token": "<TOKEN>"}
 
 2. Fetch the manifest for tag "sha-b4adbf2-intel-cpu":
 
    curl -sL \
-     -H "Authorization: Bearer $TOKEN" \
+     -H "Authorization: Bearer <TOKEN>" \
      -H "Accept: application/vnd.oci.image.index.v1+json, application/vnd.docker.distribution.manifest.v2+json, application/vnd.oci.image.manifest.v1+json, application/vnd.docker.distribution.manifest.list.v2+json" \
      "https://ghcr.io/v2/huggingface/text-generation-inference/manifests/sha-b4adbf2-intel-cpu"
 
@@ -26,7 +26,7 @@ STEP 1 — OCI Labels Check (most likely path for this image)
 3. Fetch the platform-specific manifest to get the config blob digest:
 
    curl -sL \
-     -H "Authorization: Bearer $TOKEN" \
+     -H "Authorization: Bearer <TOKEN>" \
      -H "Accept: application/vnd.oci.image.manifest.v1+json, application/vnd.docker.distribution.manifest.v2+json" \
      "https://ghcr.io/v2/huggingface/text-generation-inference/manifests/sha256:c2757adcb470124254276014bbb91bbbcd9085d46fb391b382018b89f2f2188b"
 
@@ -36,19 +36,12 @@ STEP 1 — OCI Labels Check (most likely path for this image)
 4. Fetch the config blob to read labels:
 
    curl -sL \
-     -H "Authorization: Bearer $TOKEN" \
+     -H "Authorization: Bearer <TOKEN>" \
      "https://ghcr.io/v2/huggingface/text-generation-inference/blobs/sha256:eb0158b5923df763fb29ddbe58c1685b518256f4fa4bc8a80338a8bc842cde56"
 
    → Returns image config JSON. Under .config.Labels:
      - org.opencontainers.image.source = "https://github.com/huggingface/text-generation-inference"
      - org.opencontainers.image.revision = "b4adbf2f6e2e721280bd0ea5f91d70f7d033f5ed"
-
-   You can extract just the labels with:
-
-   curl -sL \
-     -H "Authorization: Bearer $TOKEN" \
-     "https://ghcr.io/v2/huggingface/text-generation-inference/blobs/sha256:eb0158b5923df763fb29ddbe58c1685b518256f4fa4bc8a80338a8bc842cde56" \
-     | jq '.config.Labels | {source: .["org.opencontainers.image.source"], revision: .["org.opencontainers.image.revision"]}'
 
 5. Both labels exist → RESOLVED.
    - repo = https://github.com/huggingface/text-generation-inference

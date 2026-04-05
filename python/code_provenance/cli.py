@@ -46,11 +46,16 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     yaml_content = compose_path.read_text()
-    services = parse_compose(yaml_content)
+
+    try:
+        services = parse_compose(yaml_content)
+    except Exception as e:
+        print(f"Error: failed to parse {compose_path} — {e}", file=sys.stderr)
+        return 1
 
     if not services:
-        print("No services with images found.", file=sys.stderr)
-        return 0
+        print("No services with images found. Is this a valid docker-compose file?", file=sys.stderr)
+        return 1
 
     results = []
     for service_name, image_string in services:
