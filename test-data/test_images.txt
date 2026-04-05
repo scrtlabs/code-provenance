@@ -1,0 +1,6 @@
+image: ai/gemma4:4B-Q4_K_XL
+image: ghcr.io/scrtlabs/siyuan@sha256:dd399fbcba7c319b797d3186ef464409a65de24ee2d7f517649458f9546f0447
+image: traefik:v2.10
+image: ghcr.io/azaidelson/excalidraw@sha256:8bf939292531ab1aa9a0fa585dce975d65bce4870bda006d0b59b10a5eccd86a
+image: ghcr.io/morpheusais/morpheus-lumerin-node-tee@sha256:1de50018f208c9a93a21d40b1a830670d113d272b53a45d322c50de9b4db1239
+image: mariadb:10.11@sha256:dbe56e20372fc6d6b8e0e396866ba89c4c7f128c38c4f59aaa54d957db95790c
