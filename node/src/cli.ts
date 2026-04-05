@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 import { existsSync } from "node:fs";
 import { parseCompose, parseImageRef } from "./composeParser.js";
 import { resolveImage } from "./resolver.js";
-import { formatJson, formatTable } from "./output.js";
+import { formatJson, formatText } from "./output.js";
 
 function printHelp(): void {
   console.log(`usage: code-provenance [-h] [--json] [compose_file]
@@ -81,7 +81,7 @@ async function main(): Promise<number> {
   if (jsonOutput) {
     console.log(formatJson(results));
   } else {
-    console.log(formatTable(results));
+    console.log(formatText(results));
   }
 
   return 0;

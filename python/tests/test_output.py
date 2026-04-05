@@ -1,6 +1,6 @@
 import json
 from code_provenance.models import ImageResult
-from code_provenance.output import format_json, format_table
+from code_provenance.output import format_json, format_text
 
 
 def _sample_results():
@@ -37,13 +37,17 @@ class TestFormatJson:
         assert data[1]["commit"] is None
 
 
-class TestFormatTable:
-    def test_table_contains_service_names(self):
-        output = format_table(_sample_results())
+class TestFormatText:
+    def test_contains_service_names(self):
+        output = format_text(_sample_results())
         assert "web" in output
         assert "cache" in output
 
-    def test_table_contains_status(self):
-        output = format_table(_sample_results())
+    def test_contains_status(self):
+        output = format_text(_sample_results())
         assert "resolved" in output
         assert "repo_not_found" in output
+
+    def test_contains_commit_url(self):
+        output = format_text(_sample_results())
+        assert "github.com/owner/repo/commit/abc123def456" in output

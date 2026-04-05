@@ -4,7 +4,7 @@ import sys
 from pathlib import Path
 from code_provenance.compose_parser import parse_compose, parse_image_ref
 from code_provenance.resolver import resolve_image
-from code_provenance.output import format_json, format_table
+from code_provenance.output import format_json, format_text
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -69,7 +69,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.json_output:
         print(format_json(results))
     else:
-        print(format_table(results))
+        print(format_text(results))
 
     return 0
 
