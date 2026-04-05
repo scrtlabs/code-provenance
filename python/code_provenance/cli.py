@@ -23,6 +23,11 @@ def main(argv: list[str] | None = None) -> int:
         dest="json_output",
         help="Output results as JSON",
     )
+    parser.add_argument(
+        "--verbose", "-v",
+        action="store_true",
+        help="Show resolution steps",
+    )
 
     args = parser.parse_args(argv)
 
@@ -43,6 +48,14 @@ def main(argv: list[str] | None = None) -> int:
         ref = parse_image_ref(image_string)
         result = resolve_image(service_name, ref)
         results.append(result)
+
+    if args.verbose:
+        for result in results:
+            print(f"\nResolving {result.image} ...", file=sys.stderr)
+            for step in result.steps:
+                print(f"  {step}", file=sys.stderr)
+            print(f"  → {result.status}" + (f" ({result.resolution_method}, {result.confidence})" if result.status == "resolved" else ""), file=sys.stderr)
+        print(file=sys.stderr)
 
     if args.json_output:
         print(format_json(results))
