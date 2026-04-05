@@ -27,11 +27,12 @@ npx code-provenance docker-compose.yml
 ```
 
 ```
-┌─────────┬────────────────┬────────────────────────────┬──────────────┬──────────┬────────────┐
-│ SERVICE │ IMAGE          │ REPO                       │ COMMIT       │ STATUS   │ CONFIDENCE │
-├─────────┼────────────────┼────────────────────────────┼──────────────┼──────────┼────────────┤
-│ web     │ traefik:v3.6.0 │ github.com/traefik/traefik │ 06db5168c0d9 │ resolved │ exact      │
-└─────────┴────────────────┴────────────────────────────┴──────────────┴──────────┴────────────┘
+web: traefik:v3.6.0
+  repo:       github.com/traefik/traefik
+  commit:     06db5168c0d9
+  status:     resolved
+  confidence: exact
+  url:        https://github.com/traefik/traefik/commit/06db5168c0d9...
 ```
 
 ## Library Usage
