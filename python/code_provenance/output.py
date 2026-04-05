@@ -15,8 +15,8 @@ def format_table(results: list[ImageResult]) -> str:
     """Format results as a rich table, returned as a string."""
     table = Table(show_header=True, header_style="bold")
     table.add_column("SERVICE")
-    table.add_column("IMAGE")
-    table.add_column("REPO")
+    table.add_column("IMAGE", max_width=50)
+    table.add_column("REPO", max_width=50)
     table.add_column("COMMIT")
     table.add_column("STATUS")
     table.add_column("CONFIDENCE")

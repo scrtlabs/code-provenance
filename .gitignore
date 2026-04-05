@@ -4,10 +4,14 @@ __pycache__/
 *.pyc
 *.egg-info/
 .pytest_cache/
+python/dist/
 
 # Node
 node/dist/
 node/node_modules/
+
+# Secrets
+gh_token
 
 # Sample compose files in project root
 /*.yaml

@@ -13,11 +13,16 @@ export function formatJson(results: ImageResult[]): string {
 export function formatTable(results: ImageResult[]): string {
   const columns = ["SERVICE", "IMAGE", "REPO", "COMMIT", "STATUS", "CONFIDENCE"];
 
+  const MAX_COL_WIDTH = 50;
+
+  const truncate = (s: string, max: number) =>
+    s.length > max ? s.slice(0, max - 1) + "…" : s;
+
   // Build rows
   const rows: string[][] = results.map((r) => [
     r.service,
-    r.image,
-    r.repo ? r.repo.replace("https://", "") : "-",
+    truncate(r.image, MAX_COL_WIDTH),
+    r.repo ? truncate(r.repo.replace("https://", ""), MAX_COL_WIDTH) : "-",
     r.commit ? r.commit.slice(0, 12) : "-",
     r.status,
     r.confidence || "-",
