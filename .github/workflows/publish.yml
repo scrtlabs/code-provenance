@@ -1,9 +1,8 @@
 name: Publish to npm and PyPI
 
 on:
-  workflow_dispatch:  # manual trigger only until ready
-  # release:
-  #   types: [published]
+  release:
+    types: [published]
 
 jobs:
   publish-npm:
