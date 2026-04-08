@@ -64,20 +64,24 @@ The tool resolves each Docker image through a chain of strategies, stopping at t
 ## CLI Usage
 
 ```bash
-code-provenance [compose-file] [--json] [--verbose]
+code-provenance [compose-file] [--image IMAGE] [--json] [--verbose]
 ```
 
 | Argument | Description |
 |----------|-------------|
 | `compose-file` | Path to docker-compose file (default: `docker-compose.yml`) |
+| `--image IMAGE` | Resolve a single image reference instead of a compose file |
 | `--json` | Output results as JSON |
 | `--verbose`, `-v` | Show the resolution steps for each image |
 
 ### Examples
 
 ```bash
-# Text output (default)
+# Resolve all images in a compose file
 code-provenance docker-compose.yml
+
+# Resolve a single image
+code-provenance --image ollama/ollama:0.12.3
 
 # JSON output
 code-provenance docker-compose.yml --json
@@ -86,7 +90,7 @@ code-provenance docker-compose.yml --json
 code-provenance docker-compose.yml --verbose
 
 # Combine flags
-code-provenance docker-compose.yml --json --verbose
+code-provenance --image traefik:v3.6.0 --json --verbose
 ```
 
 ## Authentication
