@@ -19,6 +19,10 @@ def main(argv: list[str] | None = None) -> int:
         help="Path to docker-compose file (default: docker-compose.yml)",
     )
     parser.add_argument(
+        "--image",
+        help="Resolve a single image reference instead of a compose file",
+    )
+    parser.add_argument(
         "--json",
         action="store_true",
         dest="json_output",
@@ -40,28 +44,34 @@ def main(argv: list[str] | None = None) -> int:
             file=sys.stderr,
         )
 
-    compose_path = Path(args.compose_file)
-    if not compose_path.exists():
-        print(f"Error: {compose_path} not found", file=sys.stderr)
-        return 1
+    if args.image:
+        # Single image mode
+        ref = parse_image_ref(args.image)
+        results = [resolve_image("image", ref)]
+    else:
+        # Compose file mode
+        compose_path = Path(args.compose_file)
+        if not compose_path.exists():
+            print(f"Error: {compose_path} not found", file=sys.stderr)
+            return 1
 
-    yaml_content = compose_path.read_text()
+        yaml_content = compose_path.read_text()
 
-    try:
-        services = parse_compose(yaml_content)
-    except Exception as e:
-        print(f"Error: failed to parse {compose_path} — {e}", file=sys.stderr)
-        return 1
+        try:
+            services = parse_compose(yaml_content)
+        except Exception as e:
+            print(f"Error: failed to parse {compose_path} — {e}", file=sys.stderr)
+            return 1
 
-    if not services:
-        print("No services with images found. Is this a valid docker-compose file?", file=sys.stderr)
-        return 1
+        if not services:
+            print("No services with images found. Is this a valid docker-compose file?", file=sys.stderr)
+            return 1
 
-    results = []
-    for service_name, image_string in services:
-        ref = parse_image_ref(image_string)
-        result = resolve_image(service_name, ref)
-        results.append(result)
+        results = []
+        for service_name, image_string in services:
+            ref = parse_image_ref(image_string)
+            result = resolve_image(service_name, ref)
+            results.append(result)
 
     if args.verbose:
         for result in results:
