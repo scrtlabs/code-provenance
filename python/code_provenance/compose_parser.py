@@ -5,6 +5,7 @@ from code_provenance.models import ImageRef
 def parse_image_ref(image_string: str) -> ImageRef:
     """Parse a Docker image string into an ImageRef."""
     raw = image_string
+    digest = None
 
     # Handle digest references (image@sha256:... or image:tag@sha256:...)
     if "@" in image_string:
@@ -50,6 +51,7 @@ def parse_image_ref(image_string: str) -> ImageRef:
         namespace=namespace,
         name=name,
         tag=tag,
+        digest=digest,
         raw=raw,
     )
 
@@ -57,6 +59,8 @@ def parse_image_ref(image_string: str) -> ImageRef:
 def parse_compose(yaml_content: str) -> list[tuple[str, str]]:
     """Parse docker-compose YAML and return list of (service_name, image_string)."""
     data = yaml.safe_load(yaml_content)
+    if not isinstance(data, dict):
+        return []
     services = data.get("services", {}) or {}
     results = []
     for service_name, service_config in services.items():

@@ -3,6 +3,7 @@ export interface ImageRef {
   namespace: string;
   name: string;
   tag: string;
+  digest: string | null;
   raw: string;
 }
 

@@ -44,7 +44,7 @@ _INDEX_MEDIA_TYPES = {
 
 
 def _resolve_manifest_to_config_digest(
-    base_url: str, repo_path: str, reference: str, token: str,
+    base_url: str, repo_path: str, reference: str, token: str, _depth: int = 0,
 ) -> str | None:
     """Resolve a manifest reference to a config blob digest, handling multi-arch indexes."""
     headers = {"Authorization": f"Bearer {token}", "Accept": _MANIFEST_ACCEPT}
@@ -83,8 +83,10 @@ def _resolve_manifest_to_config_digest(
                     break
         if not platform_digest:
             return None
+        if _depth >= 3:
+            return None
         # Recursively resolve the platform-specific manifest
-        return _resolve_manifest_to_config_digest(base_url, repo_path, platform_digest, token)
+        return _resolve_manifest_to_config_digest(base_url, repo_path, platform_digest, token, _depth + 1)
 
     # Single manifest — extract config digest
     return data.get("config", {}).get("digest")

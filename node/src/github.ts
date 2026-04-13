@@ -394,27 +394,12 @@ export async function findGhcrVersionByTagPrefix(
 }
 
 /**
- * Try to find the GitHub repo for a Docker Hub image.
+ * Scrape Docker Hub description for GitHub repo links.
  */
-export async function inferRepoFromDockerhub(
+async function findGithubRepoInDockerhubDescription(
   namespace: string,
   name: string
 ): Promise<[string, string] | null> {
-  // For official images (library/X), try the image name as org/repo directly
-  if (namespace === "library") {
-    if (await checkGithubRepoExists(name, name)) {
-      return [name, name];
-    }
-  }
-
-  // For namespaced images, try namespace/name on GitHub
-  if (namespace !== "library") {
-    if (await checkGithubRepoExists(namespace, name)) {
-      return [namespace, name];
-    }
-  }
-
-  // Fall back to scraping Docker Hub description for GitHub links
   try {
     const resp = await fetch(
       `https://hub.docker.com/v2/repositories/${namespace}/${name}`,
@@ -428,7 +413,7 @@ export async function inferRepoFromDockerhub(
     };
     const text =
       (data.full_description || "") + " " + (data.description || "");
-    const match = text.match(/https?:\/\/github\.com\/([\w.-]+)\/([\w.-]+)/);
+    const match = text.match(/https?:\/\/github\.com\/([\w.-]+?)\/([\w.-]+?)(?:[./\s)\]#]|$)/);
     if (match) {
       return [match[1], match[2]];
     }
@@ -437,4 +422,33 @@ export async function inferRepoFromDockerhub(
   }
 
   return null;
+}
+
+/**
+ * Try to find the GitHub repo for a Docker Hub image.
+ */
+export async function inferRepoFromDockerhub(
+  namespace: string,
+  name: string
+): Promise<[string, string] | null> {
+  // For official images (library/X), prefer the Docker Hub description
+  // since the naive name/name heuristic can map to wrong repos
+  // (e.g., "node" -> github.com/node/node instead of nodejs/node)
+  if (namespace === "library") {
+    const descResult = await findGithubRepoInDockerhubDescription(namespace, name);
+    if (descResult) return descResult;
+    // Fall back to name/name heuristic
+    if (await checkGithubRepoExists(name, name)) {
+      return [name, name];
+    }
+    return null;
+  }
+
+  // For namespaced images, try namespace/name on GitHub
+  if (await checkGithubRepoExists(namespace, name)) {
+    return [namespace, name];
+  }
+
+  // Fall back to scraping Docker Hub description for GitHub links
+  return findGithubRepoInDockerhubDescription(namespace, name);
 }

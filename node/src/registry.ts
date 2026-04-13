@@ -63,7 +63,8 @@ async function resolveManifestToConfigDigest(
   baseUrl: string,
   repoPath: string,
   reference: string,
-  token: string
+  token: string,
+  depth: number = 0
 ): Promise<string | null> {
   try {
     const resp = await fetch(
@@ -106,7 +107,8 @@ async function resolveManifestToConfigDigest(
       }
 
       if (!platformDigest) return null;
-      return resolveManifestToConfigDigest(baseUrl, repoPath, platformDigest, token);
+      if (depth >= 3) return null;
+      return resolveManifestToConfigDigest(baseUrl, repoPath, platformDigest, token, depth + 1);
     }
 
     // Single manifest - extract config digest

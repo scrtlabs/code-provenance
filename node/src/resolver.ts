@@ -141,9 +141,9 @@ export async function resolveImage(
         result.repo = `https://github.com/${ghcrMatch.repo}`;
         result.steps.push(`[3/5] GHCR prefix match: '${matchedTag}' in ${ghcrMatch.repo}`);
         // Try OCI labels on the matched GHCR image for a commit
-        const ghcrRef = {
+        const ghcrRef: ImageRef = {
           registry: "ghcr.io", namespace: ghcrOwner, name: ref.name,
-          tag: matchedTag, raw: `ghcr.io/${ghcrOwner}/${ref.name}:${matchedTag}`,
+          tag: matchedTag, digest: null, raw: `ghcr.io/${ghcrOwner}/${ref.name}:${matchedTag}`,
         };
         const ghcrLabels = await fetchOciLabels(ghcrRef);
         const revision = ghcrLabels["org.opencontainers.image.revision"];

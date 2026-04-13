@@ -8,7 +8,8 @@ class ImageRef:
     namespace: str         # e.g. "myorg", "library"
     name: str              # e.g. "excalidraw", "postgres"
     tag: str               # e.g. "v3.4.12", "latest"
-    raw: str               # original string from docker-compose
+    digest: str | None = None  # e.g. "sha256:abc123..." when image@sha256:... is used
+    raw: str = ""          # original string from docker-compose
 
     @property
     def full_name(self) -> str:

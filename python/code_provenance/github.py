@@ -303,20 +303,8 @@ def find_ghcr_version_by_tag_prefix(
     return None
 
 
-def infer_repo_from_dockerhub(namespace: str, name: str) -> tuple[str, str] | None:
-    """Try to find the GitHub repo for a Docker Hub image."""
-    # For official images (library/X), try the image name as org/repo directly
-    # e.g., traefik -> traefik/traefik, nginx -> nginx/nginx
-    if namespace == "library":
-        if check_github_repo_exists(name, name):
-            return name, name
-
-    # For namespaced images, try namespace/name on GitHub
-    if namespace != "library":
-        if check_github_repo_exists(namespace, name):
-            return namespace, name
-
-    # Fall back to scraping Docker Hub description for GitHub links
+def _find_github_repo_in_dockerhub_description(namespace: str, name: str) -> tuple[str, str] | None:
+    """Scrape Docker Hub description for GitHub repo links."""
     url = f"https://hub.docker.com/v2/repositories/{namespace}/{name}"
     try:
         resp = requests.get(url, timeout=10)
@@ -325,10 +313,32 @@ def infer_repo_from_dockerhub(namespace: str, name: str) -> tuple[str, str] | No
 
         data = resp.json()
         text = (data.get("full_description") or "") + " " + (data.get("description") or "")
-        match = re.search(r"https?://github\.com/([\w.-]+)/([\w.-]+)", text)
+        match = re.search(r"https?://github\.com/([\w.-]+)/([\w.-]+?)(?:[./\s)\]#]|$)", text)
         if match:
             return match.group(1), match.group(2)
     except requests.RequestException:
         pass
 
     return None
+
+
+def infer_repo_from_dockerhub(namespace: str, name: str) -> tuple[str, str] | None:
+    """Try to find the GitHub repo for a Docker Hub image."""
+    # For official images (library/X), prefer the Docker Hub description
+    # since the naive name/name heuristic can map to wrong repos
+    # (e.g., "node" -> github.com/node/node instead of nodejs/node)
+    if namespace == "library":
+        result = _find_github_repo_in_dockerhub_description(namespace, name)
+        if result:
+            return result
+        # Fall back to name/name heuristic
+        if check_github_repo_exists(name, name):
+            return name, name
+        return None
+
+    # For namespaced images, try namespace/name on GitHub
+    if check_github_repo_exists(namespace, name):
+        return namespace, name
+
+    # Fall back to scraping Docker Hub description for GitHub links
+    return _find_github_repo_in_dockerhub_description(namespace, name)

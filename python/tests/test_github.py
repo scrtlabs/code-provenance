@@ -132,9 +132,34 @@ class TestCheckGithubRepoExists:
 
 
 class TestInferRepoFromDockerhub:
+    @patch("code_provenance.github.requests.get")
     @patch("code_provenance.github.check_github_repo_exists")
-    def test_official_image_tries_name_as_org(self, mock_exists):
-        """For library/traefik, try traefik/traefik on GitHub first."""
+    def test_official_image_prefers_description(self, mock_exists, mock_get):
+        """For library/traefik, prefer Docker Hub description over name/name heuristic."""
+        mock_get.return_value = MagicMock(
+            status_code=200,
+            json=lambda: {
+                "full_description": "Source: https://github.com/traefik/traefik",
+                "description": "",
+            },
+        )
+        owner, repo = infer_repo_from_dockerhub("library", "traefik")
+        assert owner == "traefik"
+        assert repo == "traefik"
+        # Should not even need to check repo existence when description has the link
+        mock_exists.assert_not_called()
+
+    @patch("code_provenance.github.requests.get")
+    @patch("code_provenance.github.check_github_repo_exists")
+    def test_official_image_falls_back_to_name_heuristic(self, mock_exists, mock_get):
+        """For library images, fall back to name/name when description has no GitHub link."""
+        mock_get.return_value = MagicMock(
+            status_code=200,
+            json=lambda: {
+                "full_description": "No GitHub link here",
+                "description": "",
+            },
+        )
         mock_exists.return_value = True
         owner, repo = infer_repo_from_dockerhub("library", "traefik")
         assert owner == "traefik"

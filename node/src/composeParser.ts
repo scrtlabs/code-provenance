@@ -8,12 +8,13 @@ export function parseImageRef(imageString: string): ImageRef {
   const raw = imageString;
   let tag: string;
   let namePart: string;
+  let digest: string | null = null;
 
   // Handle digest references (image@sha256:... or image:tag@sha256:...)
   if (imageString.includes("@")) {
     const atIdx = imageString.indexOf("@");
     namePart = imageString.slice(0, atIdx);
-    const digest = imageString.slice(atIdx + 1);
+    digest = imageString.slice(atIdx + 1);
     // Check if there's a tag before the digest (image:tag@sha256:...)
     const lastSegment = namePart.split("/").pop()!;
     if (lastSegment.includes(":")) {
@@ -63,7 +64,7 @@ export function parseImageRef(imageString: string): ImageRef {
     name = remaining.slice(1).join("/");
   }
 
-  return { registry, namespace, name, tag, raw };
+  return { registry, namespace, name, tag, digest, raw };
 }
 
 /**
@@ -71,7 +72,10 @@ export function parseImageRef(imageString: string): ImageRef {
  */
 export function parseCompose(yamlContent: string): [string, string][] {
   const data = YAML.parse(yamlContent);
-  const services = data?.services ?? {};
+  if (data === null || data === undefined || typeof data !== "object" || Array.isArray(data)) {
+    return [];
+  }
+  const services = data.services ?? {};
   const results: [string, string][] = [];
 
   for (const [serviceName, serviceConfig] of Object.entries(services)) {
