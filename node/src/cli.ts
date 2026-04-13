@@ -61,7 +61,7 @@ async function main(): Promise<number> {
   }
 
   if (args.includes("--version")) {
-    console.log("code-provenance 0.1.11");
+    console.log("code-provenance 0.1.13");
     return 0;
   }
 

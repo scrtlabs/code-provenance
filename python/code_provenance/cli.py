@@ -54,7 +54,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--version",
         action="version",
-        version="%(prog)s 0.1.11",
+        version="%(prog)s 0.1.13",
     )
     parser.add_argument(
         "--verbose", "-v",
